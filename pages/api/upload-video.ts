@@ -29,7 +29,11 @@ export default async function handler(
     }
 
     try {
-      console.log("📤 Upload vidéo vers B2:", file.originalFilename);
+      console.log("📤 Upload vidéo vers B2:", {
+        nom: file.originalFilename,
+        taille: `${Math.round((file.size || 0) / (1024 * 1024))}MB`,
+        type: file.mimetype,
+      });
 
       // Créer un nom unique pour le fichier
       const timestamp = Date.now();
@@ -40,20 +44,35 @@ export default async function handler(
 
       // Lire le fichier
       const fileBuffer = fs.readFileSync(file.filepath);
+      console.log(`📊 Fichier lu: ${fileBuffer.length} bytes`);
 
       // Créer le client B2
       const b2Client = createB2Client();
+
+      // Déterminer le type MIME correct pour les vidéos Samsung
+      let contentType = file.mimetype || "video/mp4";
+      const ext = extension.toLowerCase();
+
+      // Mappages spéciaux pour les formats Samsung
+      if (ext === ".mp4" || ext === ".m4v") contentType = "video/mp4";
+      else if (ext === ".mov" || ext === ".qt") contentType = "video/quicktime";
+      else if (ext === ".3gp") contentType = "video/3gpp";
+      else if (ext === ".webm") contentType = "video/webm";
+      else if (ext === ".avi") contentType = "video/x-msvideo";
+
+      console.log(`🎬 Type MIME déterminé: ${contentType}`);
 
       // Upload vers B2
       const uploadCommand = new PutObjectCommand({
         Bucket: B2_CONFIG.bucketName,
         Key: fileName,
         Body: fileBuffer,
-        ContentType: file.mimetype || "video/mp4",
+        ContentType: contentType,
         // Métadonnées
         Metadata: {
           "original-name": file.originalFilename || "video.mp4",
           "upload-date": new Date().toISOString(),
+          "original-mime": file.mimetype || "unknown",
         },
       });
 

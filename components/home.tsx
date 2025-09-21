@@ -64,7 +64,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  const MAX_FILES = 10; // Limite de 10 fichiers par upload
+  // Pas de limite sur le nombre de photos - pour un mariage on veut tout partager ! 📸
 
   // Photos
   const {
@@ -113,14 +113,27 @@ export default function Home() {
 
     try {
       for (const file of videoFiles) {
+        console.log("🚀 Début upload vidéo:", {
+          name: file.name,
+          type: file.type,
+          size: `${Math.round(file.size / (1024 * 1024))}MB`,
+        });
+
         const formData = new FormData();
         formData.append("file", file);
-        await uploadVideo(formData);
+
+        const response = await uploadVideo(formData);
+        console.log("✅ Upload vidéo réussi:", response);
       }
       queryClient.invalidateQueries({ queryKey: ["videos"] });
       setVideoFiles([]);
     } catch (error) {
-      console.error("Erreur upload vidéos:", error);
+      console.error("❌ Erreur upload vidéos:", error);
+      alert(
+        `❌ Erreur lors de l'upload de la vidéo !\n${
+          error instanceof Error ? error.message : "Erreur inconnue"
+        }`
+      );
     } finally {
       setIsUploading(false);
     }
@@ -133,12 +146,49 @@ export default function Home() {
     if (!files) return;
 
     if (type === "photo") {
-      const newFiles = Array.from(files).slice(0, MAX_FILES);
-      setPhotoFiles((prev) => [...prev, ...newFiles].slice(0, MAX_FILES));
+      const newFiles = Array.from(files);
+      setPhotoFiles((prev) => [...prev, ...newFiles]);
     } else {
       // Pour les vidéos, on ne prend que la première et on remplace
       const newFile = Array.from(files)[0];
       if (newFile) {
+        // Vérifier la taille du fichier (max 500MB)
+        const maxSize = 500 * 1024 * 1024; // 500MB
+        if (newFile.size > maxSize) {
+          alert(
+            `⚠️ Fichier trop volumineux !\nTaille max: 500MB\nTaille actuelle: ${Math.round(
+              newFile.size / (1024 * 1024)
+            )}MB`
+          );
+          return;
+        }
+
+        // Vérifier le type de fichier
+        const allowedTypes = [
+          "video/mp4",
+          "video/mov",
+          "video/avi",
+          "video/webm",
+          "video/3gp",
+          "video/quicktime",
+        ];
+        if (
+          !allowedTypes.some((type) =>
+            newFile.type.includes(type.split("/")[1])
+          )
+        ) {
+          alert(
+            `⚠️ Format vidéo non supporté !\nFormats acceptés: MP4, MOV, AVI, WebM, 3GP\nType détecté: ${newFile.type}`
+          );
+          return;
+        }
+
+        console.log("📹 Vidéo sélectionnée:", {
+          name: newFile.name,
+          type: newFile.type,
+          size: `${Math.round(newFile.size / (1024 * 1024))}MB`,
+        });
+
         setVideoFiles([newFile]);
       }
     }
@@ -295,7 +345,7 @@ export default function Home() {
                       Sélectionner des photos
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Jusqu&apos;à {MAX_FILES} photos
+                      Autant de photos que vous voulez ! 💕
                     </p>
                   </div>
                 </label>
@@ -354,7 +404,7 @@ export default function Home() {
                 <label className="block">
                   <input
                     type="file"
-                    accept="video/*"
+                    accept="video/mp4,video/mov,video/avi,video/webm,video/3gp"
                     onChange={(e) => handleFileSelect(e.target.files, "video")}
                     className="hidden"
                     disabled={isUploading}
@@ -365,7 +415,7 @@ export default function Home() {
                       Sélectionner une vidéo
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Une vidéo à la fois
+                      Max 500MB • MP4, MOV, AVI, WebM, 3GP
                     </p>
                   </div>
                 </label>
@@ -384,7 +434,8 @@ export default function Home() {
                               {videoFiles[0].name}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Vidéo sélectionnée
+                              {Math.round(videoFiles[0].size / (1024 * 1024))}MB
+                              • {videoFiles[0].type}
                             </p>
                           </div>
                         </div>
@@ -499,11 +550,6 @@ export default function Home() {
                           height={192}
                           className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute inset-2 bg-opacity-0 group-hover:bg-opacity-20 rounded-xl transition-all duration-300 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-white text-2xl">👁️</span>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   ))}
