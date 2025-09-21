@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 
 type MediaFile = {
   id: string;
@@ -235,7 +236,7 @@ export default function Home() {
                       Sélectionner des photos
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Jusqu'à {MAX_FILES} photos
+                      Jusqu&apos;à {MAX_FILES} photos
                     </p>
                   </div>
                 </label>
@@ -246,9 +247,11 @@ export default function Home() {
                     <div className="flex flex-wrap gap-2 mb-3">
                       {photoFiles.map((file, index) => (
                         <div key={index} className="relative">
-                          <img
+                          <Image
                             src={URL.createObjectURL(file)}
                             alt={file.name}
+                            width={64}
+                            height={64}
                             className="w-16 h-16 object-cover rounded-lg border-2 border-pink-200"
                           />
                           <button
@@ -430,9 +433,11 @@ export default function Home() {
                       onClick={() => openModal(photo, "photo")}
                     >
                       <div className="relative overflow-hidden rounded-2xl shadow-lg bg-white p-2">
-                        <img
+                        <Image
                           src={photo.thumbnailLink}
                           alt={photo.name}
+                          width={300}
+                          height={192}
                           className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-2 bg-opacity-0 group-hover:bg-opacity-20 rounded-xl transition-all duration-300 flex items-center justify-center">
@@ -522,9 +527,11 @@ export default function Home() {
           {/* Contenu modal */}
           <div className="relative w-full h-full flex items-center justify-center p-4">
             {modalContent.type === "photo" ? (
-              <img
+              <Image
                 src={modalContent.url}
                 alt={modalContent.name}
+                width={1200}
+                height={800}
                 className="max-w-full max-h-full object-contain"
                 onClick={(e) => e.stopPropagation()}
                 style={{ maxHeight: "calc(100vh - 2rem)" }}

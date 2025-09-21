@@ -97,15 +97,16 @@ export default async function handler(
       }
 
       let errorMessage = "Erreur upload vers Backblaze B2";
-      if (error.message?.includes("credentials")) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg?.includes("credentials")) {
         errorMessage = "Erreur d'authentification B2. Vérifiez vos clés.";
-      } else if (error.message?.includes("bucket")) {
+      } else if (errorMsg?.includes("bucket")) {
         errorMessage = "Bucket B2 introuvable. Vérifiez la configuration.";
       }
 
       return res.status(500).json({
         error: errorMessage,
-        details: error.message,
+        details: errorMsg,
       });
     }
   });

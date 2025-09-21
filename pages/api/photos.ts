@@ -43,15 +43,16 @@ export default async function handler(
     console.error("❌ Erreur récupération photos B2:", error);
 
     let errorMessage = "Erreur récupération photos";
-    if (error.message?.includes("credentials")) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (errorMsg?.includes("credentials")) {
       errorMessage = "Erreur d'authentification B2. Vérifiez vos clés.";
-    } else if (error.message?.includes("bucket")) {
+    } else if (errorMsg?.includes("bucket")) {
       errorMessage = "Bucket B2 introuvable. Vérifiez la configuration.";
     }
 
     res.status(500).json({
       error: errorMessage,
-      details: error.message,
+      details: errorMsg,
     });
   }
 }
