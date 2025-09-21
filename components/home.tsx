@@ -39,7 +39,10 @@ async function uploadVideo(formData: FormData) {
     method: "POST",
     body: formData,
   });
-  if (!res.ok) throw new Error("Erreur upload vidéo");
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errorText}`);
+  }
   return res.json();
 }
 
@@ -64,7 +67,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  // Pas de limite sur le nombre de photos - pour un mariage on veut tout partager ! 📸
+  const MAX_PHOTOS = 50; // Limite de 50 photos par envoi pour éviter la surcharge
 
   // Photos
   const {
@@ -111,28 +114,106 @@ export default function Home() {
     if (videoFiles.length === 0) return;
     setIsUploading(true);
 
+    let successCount = 0;
+    const errorDetails: string[] = [];
+
     try {
-      for (const file of videoFiles) {
-        console.log("🚀 Début upload vidéo:", {
-          name: file.name,
-          type: file.type,
-          size: `${Math.round(file.size / (1024 * 1024))}MB`,
-        });
+      for (let i = 0; i < videoFiles.length; i++) {
+        const file = videoFiles[i];
 
-        const formData = new FormData();
-        formData.append("file", file);
+        try {
+          console.log(`🚀 Upload vidéo ${i + 1}/${videoFiles.length}:`, {
+            name: file.name,
+            type: file.type,
+            size: `${Math.round(file.size / (1024 * 1024))}MB`,
+            lastModified: new Date(file.lastModified).toISOString(),
+          });
 
-        const response = await uploadVideo(formData);
-        console.log("✅ Upload vidéo réussi:", response);
+          // Vérifications avant upload
+          console.log("🔍 Vérifications pré-upload:", {
+            isFile: file instanceof File,
+            hasName: !!file.name,
+            hasSize: file.size > 0,
+            hasType: !!file.type,
+          });
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          console.log("📤 Envoi FormData...");
+          const startTime = Date.now();
+
+          const response = await uploadVideo(formData);
+
+          const uploadTime = Date.now() - startTime;
+          console.log(
+            `✅ Upload ${i + 1} réussi en ${uploadTime}ms:`,
+            response
+          );
+
+          successCount++;
+        } catch (fileError) {
+          const errorMsg =
+            fileError instanceof Error ? fileError.message : String(fileError);
+          console.error(`❌ Erreur upload fichier "${file.name}":`, fileError);
+
+          errorDetails.push(`"${file.name}": ${errorMsg}`);
+        }
       }
-      queryClient.invalidateQueries({ queryKey: ["videos"] });
-      setVideoFiles([]);
+
+      // Rafraîchir la liste des vidéos même si certains uploads ont échoué
+      if (successCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ["videos"] });
+        setVideoFiles([]);
+      }
+
+      // Afficher le résultat
+      if (successCount === videoFiles.length) {
+        alert(`🎉 ${successCount} vidéo(s) uploadée(s) avec succès !`);
+      } else if (successCount > 0) {
+        alert(
+          `⚠️ Résultat mixte:\n✅ ${successCount} vidéo(s) réussie(s)\n❌ ${
+            errorDetails.length
+          } échec(s):\n\n${errorDetails.join("\n")}`
+        );
+      } else {
+        throw new Error(
+          `Tous les uploads ont échoué:\n${errorDetails.join("\n")}`
+        );
+      }
     } catch (error) {
-      console.error("❌ Erreur upload vidéos:", error);
+      console.error("❌ Erreur générale upload vidéos:", error);
+
+      let debugInfo = "\n\n🔍 INFOS DEBUG:\n";
+      debugInfo += `• Nombre de fichiers: ${videoFiles.length}\n`;
+      debugInfo += `• Navigateur: ${navigator.userAgent.split(" ").pop()}\n`;
+      debugInfo += `• Connexion: ${
+        (navigator as unknown as { connection?: { effectiveType?: string } })
+          .connection?.effectiveType || "inconnue"
+      }\n`;
+      debugInfo += `• Taille totale: ${Math.round(
+        videoFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)
+      )}MB\n`;
+
+      if (videoFiles.length > 0) {
+        debugInfo += `• Premier fichier:\n`;
+        debugInfo += `  - Nom: ${videoFiles[0].name}\n`;
+        debugInfo += `  - Type: ${videoFiles[0].type}\n`;
+        debugInfo += `  - Taille: ${Math.round(
+          videoFiles[0].size / (1024 * 1024)
+        )}MB\n`;
+      }
+
+      if (errorDetails.length > 0) {
+        debugInfo += `• Erreurs détaillées:\n${errorDetails
+          .map((e) => `  - ${e}`)
+          .join("\n")}\n`;
+      }
+
       alert(
-        `❌ Erreur lors de l'upload de la vidéo !\n${
+        `❌ Erreur lors de l'upload des vidéos !\n\n${
           error instanceof Error ? error.message : "Erreur inconnue"
-        }`
+        }${debugInfo}\n\n💡 Essayez:\n• Une vidéo à la fois\n• Vérifiez votre connexion\n• Réduisez la taille si > 500MB`
       );
     } finally {
       setIsUploading(false);
@@ -147,23 +228,64 @@ export default function Home() {
 
     if (type === "photo") {
       const newFiles = Array.from(files);
-      setPhotoFiles((prev) => [...prev, ...newFiles]);
+
+      // Filtrer pour ne garder que les images
+      const imageFiles = newFiles.filter((file) => {
+        const isImage = file.type.startsWith("image/");
+        if (!isImage) {
+          alert(
+            `⚠️ "${file.name}" n'est pas une image !\nSeules les photos sont acceptées ici.`
+          );
+        }
+        return isImage;
+      });
+
+      if (imageFiles.length === 0) return;
+
+      const totalFiles = photoFiles.length + imageFiles.length;
+
+      if (totalFiles > MAX_PHOTOS) {
+        alert(
+          `⚠️ Limite dépassée !\nMax ${MAX_PHOTOS} photos par envoi\nActuel: ${photoFiles.length}, Nouveau: ${imageFiles.length}`
+        );
+        return;
+      }
+
+      setPhotoFiles((prev) => [...prev, ...imageFiles]);
     } else {
-      // Pour les vidéos, on ne prend que la première et on remplace
-      const newFile = Array.from(files)[0];
-      if (newFile) {
-        // Vérifier la taille du fichier (max 500MB)
-        const maxSize = 500 * 1024 * 1024; // 500MB
+      // Pour les vidéos, permettre la sélection multiple
+      const newFiles = Array.from(files);
+      const validFiles: File[] = [];
+
+      for (const newFile of newFiles) {
+        // Vérifier que c'est bien une vidéo
+        const isVideo =
+          newFile.type.startsWith("video/") ||
+          ["mp4", "mov", "avi", "webm", "3gp"].some((ext) =>
+            newFile.name.toLowerCase().endsWith("." + ext)
+          );
+
+        if (!isVideo) {
+          alert(
+            `⚠️ "${newFile.name}" n'est pas une vidéo !\nSeules les vidéos sont acceptées ici.`
+          );
+          continue;
+        }
+
+        // Vérifier la taille du fichier (max 1GB)
+        const maxSize = 1024 * 1024 * 1024; // 1GB
         if (newFile.size > maxSize) {
           alert(
-            `⚠️ Fichier trop volumineux !\nTaille max: 500MB\nTaille actuelle: ${Math.round(
+            `⚠️ Fichier "${
+              newFile.name
+            }" trop volumineux !\nTaille max: 1GB\nTaille actuelle: ${Math.round(
               newFile.size / (1024 * 1024)
             )}MB`
           );
-          return;
+          continue;
         }
 
-        // Vérifier le type de fichier
+        // Vérifier le type de fichier plus spécifiquement
         const allowedTypes = [
           "video/mp4",
           "video/mov",
@@ -171,25 +293,39 @@ export default function Home() {
           "video/webm",
           "video/3gp",
           "video/quicktime",
+          "video/x-msvideo",
         ];
         if (
-          !allowedTypes.some((type) =>
-            newFile.type.includes(type.split("/")[1])
+          !allowedTypes.some(
+            (type) =>
+              newFile.type.includes(type.split("/")[1]) || newFile.type === type
           )
         ) {
-          alert(
-            `⚠️ Format vidéo non supporté !\nFormats acceptés: MP4, MOV, AVI, WebM, 3GP\nType détecté: ${newFile.type}`
-          );
-          return;
+          // Si le type MIME n'est pas reconnu, vérifier l'extension
+          const extension = newFile.name.toLowerCase().split(".").pop();
+          const allowedExtensions = ["mp4", "mov", "avi", "webm", "3gp"];
+          if (!allowedExtensions.includes(extension || "")) {
+            alert(
+              `⚠️ Format de "${newFile.name}" non supporté !\nFormats acceptés: MP4, MOV, AVI, WebM, 3GP\nType détecté: ${newFile.type}`
+            );
+            continue;
+          }
         }
 
-        console.log("📹 Vidéo sélectionnée:", {
-          name: newFile.name,
-          type: newFile.type,
-          size: `${Math.round(newFile.size / (1024 * 1024))}MB`,
-        });
+        validFiles.push(newFile);
+      }
 
-        setVideoFiles([newFile]);
+      if (validFiles.length > 0) {
+        console.log(
+          "📹 Vidéos sélectionnées:",
+          validFiles.map((f) => ({
+            name: f.name,
+            type: f.type,
+            size: `${Math.round(f.size / (1024 * 1024))}MB`,
+          }))
+        );
+
+        setVideoFiles((prev) => [...prev, ...validFiles]);
       }
     }
   };
@@ -304,7 +440,7 @@ export default function Home() {
             <div className="inline-flex items-center space-x-2 mb-4">
               <span className="text-2xl">💕</span>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                Jo & Kevin
+                Johanna & Kevin
               </h1>
               <span className="text-2xl">💕</span>
             </div>
@@ -345,42 +481,39 @@ export default function Home() {
                       Sélectionner des photos
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Autant de photos que vous voulez ! 💕
+                      Max 50 photos par envoi
                     </p>
                   </div>
                 </label>
 
-                {/* Prévisualisation photos */}
+                {/* Compteur photos */}
                 {photoFiles.length > 0 && (
                   <div className="mt-4">
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {photoFiles.map((file, index) => (
-                        <div key={index} className="relative">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={file.name}
-                            width={64}
-                            height={64}
-                            className="w-16 h-16 object-cover rounded-lg border-2 border-pink-200"
-                          />
-                          <button
-                            onClick={() => removeFile(index, "photo")}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                    <div className="bg-pink-50 rounded-xl p-4 border border-pink-200 text-center">
+                      <div className="flex items-center justify-center space-x-2 mb-3">
+                        <span className="text-2xl">📸</span>
+                        <p className="font-medium text-gray-800">
+                          {photoFiles.length} photo(s) sélectionnée(s)
+                        </p>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <button
+                          onClick={handlePhotoUpload}
+                          disabled={isUploading}
+                          className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:from-pink-600 hover:to-rose-600 transition-all"
+                        >
+                          {isUploading
+                            ? "⏳ Envoi en cours..."
+                            : `💝 Envoyer ${photoFiles.length} photo(s)`}
+                        </button>
+                        <button
+                          onClick={() => setPhotoFiles([])}
+                          className="text-gray-400 hover:text-red-500 transition-colors bg-pink-100 rounded-xl py-2 px-4"
+                        >
+                          <span className="text-lg">🗑️</span>
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={handlePhotoUpload}
-                      disabled={isUploading}
-                      className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:from-pink-600 hover:to-rose-600 transition-all"
-                    >
-                      {isUploading
-                        ? "⏳ Envoi en cours..."
-                        : `💝 Envoyer ${photoFiles.length} photo(s)`}
-                    </button>
                   </div>
                 )}
               </div>
@@ -405,6 +538,7 @@ export default function Home() {
                   <input
                     type="file"
                     accept="video/mp4,video/mov,video/avi,video/webm,video/3gp"
+                    multiple
                     onChange={(e) => handleFileSelect(e.target.files, "video")}
                     className="hidden"
                     disabled={isUploading}
@@ -412,34 +546,54 @@ export default function Home() {
                   <div className="border-2 border-dashed border-purple-200 rounded-xl p-6 text-center cursor-pointer hover:border-purple-300 transition-colors">
                     <span className="text-4xl mb-2 block">🎥</span>
                     <p className="text-purple-600 font-medium">
-                      Sélectionner une vidéo
+                      Sélectionner des vidéos
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Max 500MB • MP4, MOV, AVI, WebM, 3GP
+                      Max 1GB chacune • Upload multiple • MP4, MOV, AVI, WebM,
+                      3GP
                     </p>
                   </div>
                 </label>
 
-                {/* Prévisualisation vidéo */}
+                {/* Compteur vidéos */}
                 {videoFiles.length > 0 && (
                   <div className="mt-4">
                     <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                            <span className="text-xl">🎬</span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-800 text-sm break-all">
-                              {videoFiles[0].name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {Math.round(videoFiles[0].size / (1024 * 1024))}MB
-                              • {videoFiles[0].type}
-                            </p>
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-center space-x-2 mb-3">
+                        <span className="text-2xl">🎬</span>
+                        <p className="font-medium text-gray-800">
+                          {videoFiles.length} vidéo(s) sélectionnée(s)
+                        </p>
                       </div>
+
+                      {/* Liste des vidéos */}
+                      <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                        {videoFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-white rounded-lg p-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">🎬</span>
+                              <div>
+                                <p className="text-xs font-medium text-gray-800 truncate max-w-40">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {Math.round(file.size / (1024 * 1024))}MB
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeFile(index, "video")}
+                              className="text-red-400 hover:text-red-600 text-sm"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
                       <div className="flex justify-between gap-2">
                         <button
                           onClick={handleVideoUpload}
@@ -448,7 +602,7 @@ export default function Home() {
                         >
                           {isUploading
                             ? "⏳ Envoi en cours..."
-                            : "🎊 Envoyer cette vidéo"}
+                            : `🎊 Envoyer ${videoFiles.length} vidéo(s)`}
                         </button>
                         <button
                           onClick={() => setVideoFiles([])}
