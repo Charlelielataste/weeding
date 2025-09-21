@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 
@@ -18,6 +18,11 @@ type ModalContent = {
   url: string;
   name: string;
 } | null;
+
+// Interface pour gérer l'état de la modal dans l'historique
+interface WindowWithModalHandler extends Window {
+  modalBackHandler?: (e: PopStateEvent) => void;
+}
 
 // ---- API CALLS ----
 async function uploadPhoto(formData: FormData) {
@@ -57,6 +62,7 @@ export default function Home() {
   const [modalContent, setModalContent] = useState<ModalContent>(null);
   const [isUploading, setIsUploading] = useState(false);
   const queryClient = useQueryClient();
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const MAX_FILES = 10; // Limite de 10 fichiers par upload
 
@@ -146,6 +152,22 @@ export default function Home() {
     }
   };
 
+  const handleTabChange = (tab: TabType) => {
+    // Sauvegarder la position actuelle des onglets avant le changement
+    const tabsPosition = tabsRef.current?.offsetTop || 0;
+
+    setActiveTab(tab);
+
+    // Utiliser requestAnimationFrame pour s'assurer que le DOM est mis à jour
+    requestAnimationFrame(() => {
+      // Scroller vers la position des onglets
+      window.scrollTo({
+        top: tabsPosition - 20, // 20px de marge pour un meilleur visuel
+        behavior: "smooth",
+      });
+    });
+  };
+
   const openModal = (file: MediaFile, type: "photo" | "video") => {
     setModalContent({
       type,
@@ -154,18 +176,55 @@ export default function Home() {
     });
     // Empêcher le scroll du body
     document.body.style.overflow = "hidden";
+
+    // Gérer le bouton retour sur Android pour fermer la modal
+    const handleBackButton = (e: PopStateEvent) => {
+      e.preventDefault();
+      closeModal();
+    };
+
+    // Ajouter un état dans l'historique pour capturer le retour
+    window.history.pushState({ modalOpen: true }, "");
+    window.addEventListener("popstate", handleBackButton);
+
+    // Stocker la fonction de nettoyage pour la supprimer plus tard
+    (window as WindowWithModalHandler).modalBackHandler = handleBackButton;
   };
 
   const closeModal = () => {
     setModalContent(null);
     // Rétablir le scroll du body
     document.body.style.overflow = "unset";
+
+    // Nettoyer l'event listener du bouton retour
+    const windowWithHandler = window as WindowWithModalHandler;
+    if (windowWithHandler.modalBackHandler) {
+      window.removeEventListener(
+        "popstate",
+        windowWithHandler.modalBackHandler
+      );
+      delete windowWithHandler.modalBackHandler;
+    }
+
+    // Retirer l'état de l'historique si on ferme manuellement
+    if (window.history.state?.modalOpen) {
+      window.history.back();
+    }
   };
 
-  // Nettoyer le scroll du body au démontage du composant
+  // Nettoyer le scroll du body et les event listeners au démontage du composant
   useEffect(() => {
     return () => {
       document.body.style.overflow = "unset";
+      // Nettoyer l'event listener du bouton retour si le composant se démonte
+      const windowWithHandler = window as WindowWithModalHandler;
+      if (windowWithHandler.modalBackHandler) {
+        window.removeEventListener(
+          "popstate",
+          windowWithHandler.modalBackHandler
+        );
+        delete windowWithHandler.modalBackHandler;
+      }
     };
   }, []);
 
@@ -368,10 +427,10 @@ export default function Home() {
             </div>
 
             {/* Onglets mariage */}
-            <div className="flex justify-center mb-6">
+            <div ref={tabsRef} className="flex justify-center mb-6">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-1 flex border border-pink-100">
                 <button
-                  onClick={() => setActiveTab("photos")}
+                  onClick={() => handleTabChange("photos")}
                   className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                     activeTab === "photos"
                       ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
@@ -381,7 +440,7 @@ export default function Home() {
                   📸 Photos {photos && `(${photos.length})`}
                 </button>
                 <button
-                  onClick={() => setActiveTab("videos")}
+                  onClick={() => handleTabChange("videos")}
                   className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                     activeTab === "videos"
                       ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg"
