@@ -12,42 +12,23 @@ export default function UploadPage() {
       <nav className="fixed top-4 left-4 z-50">
         <Link
           href="/"
-          className="bg-white/80 backdrop-blur rounded-xl px-4 py-2 shadow-lg hover:bg-white/90 transition-all"
+          className="bg-white/80 backdrop-blur text-purple-600 rounded-xl px-4 py-2 shadow-lg transition-all"
         >
-          ← Accueil
+          Accueil
         </Link>
       </nav>
 
       <nav className="fixed top-4 right-4 z-50">
         <Link
           href="/gallery"
-          className="bg-white/80 backdrop-blur rounded-xl px-4 py-2 shadow-lg hover:bg-white/90 transition-all"
+          className="bg-white/80 backdrop-blur text-pink-600 rounded-xl px-4 py-2 shadow-lg transition-all"
         >
-          🎬 Galerie
+          🖼️ Galerie
         </Link>
       </nav>
 
-      {/* Header */}
-      <div className="text-center mb-8 pt-16">
-        <div className="inline-flex items-center space-x-2 mb-4">
-          <span className="text-2xl">💕</span>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-            Johanna & Kevin
-          </h1>
-          <span className="text-2xl">💕</span>
-        </div>
-        <p className="text-lg text-gray-600 font-medium">
-          Partagez vos plus beaux souvenirs
-        </p>
-        <div className="flex justify-center space-x-1 mt-2">
-          <span className="text-lg">🌸</span>
-          <span className="text-lg">✨</span>
-          <span className="text-lg">🌸</span>
-        </div>
-      </div>
-
       {/* Section Upload */}
-      <div className="max-w-lg mx-auto mb-8">
+      <div className="max-w-lg mx-auto mb-8 mt-10">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-pink-100 p-6">
           {/* Upload Photos */}
           <PhotoUpload />

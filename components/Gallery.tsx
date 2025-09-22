@@ -130,18 +130,7 @@ export function Gallery() {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-700 mb-2">
-          Nos souvenirs partagés
-        </h2>
-        <div className="flex justify-center space-x-1">
-          <span className="text-lg">💫</span>
-          <span className="text-lg">💕</span>
-          <span className="text-lg">💫</span>
-        </div>
-      </div>
-
+    <div className="max-w-2xl mx-auto mt-10">
       {/* Onglets */}
       <div ref={tabsRef} className="flex justify-center mb-6">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-1 flex border border-pink-100">
@@ -254,7 +243,7 @@ export function Gallery() {
             {videos?.map((video) => (
               <div
                 key={video.id}
-                className="group cursor-pointer"
+                className="cursor-pointer"
                 onClick={() => openModal(video, "video")}
               >
                 <div className="relative overflow-hidden rounded-2xl shadow-lg bg-white p-2">
@@ -279,18 +268,9 @@ export function Gallery() {
                     )}
 
                     {/* Overlay de play */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                      <div className="bg-white/90 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-2xl">▶️</span>
-                      </div>
+                    <div className="absolute inset-0 bg-black/10 transition-colors flex items-center justify-center">
+                      <span className="text-2xl">▶️</span>
                     </div>
-                  </div>
-
-                  {/* Nom du fichier */}
-                  <div className="mt-2 text-center">
-                    <p className="text-xs font-medium text-gray-700 truncate">
-                      {video.name}
-                    </p>
                   </div>
                 </div>
               </div>

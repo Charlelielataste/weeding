@@ -1,3 +1,4 @@
+import Title from "@/components/Title";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -8,9 +9,7 @@ export default function HomePage() {
         <div className="mb-12">
           <div className="inline-flex items-center space-x-2 mb-4">
             <span className="text-4xl">💕</span>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-              Johanna & Kevin
-            </h1>
+            <Title />
             <span className="text-4xl">💕</span>
           </div>
           <p className="text-xl text-gray-600 font-medium mb-4">

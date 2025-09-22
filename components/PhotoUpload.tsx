@@ -43,10 +43,6 @@ export function PhotoUpload() {
     });
   };
 
-  const removeFile = (index: number) => {
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="mb-6">
       <div className="flex items-center justify-center mb-4">
