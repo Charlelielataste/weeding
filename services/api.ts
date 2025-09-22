@@ -116,11 +116,6 @@ export async function uploadVideoWithPresignedUrl(file: File) {
       },
     };
   } catch (error) {
-    console.error("❌ Erreur complète:", {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-    });
     throw error;
   }
 }
