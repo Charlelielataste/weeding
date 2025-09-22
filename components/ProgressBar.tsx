@@ -4,9 +4,14 @@ import { UploadProgressState } from "../types";
 interface ProgressBarProps {
   uploadState: UploadProgressState;
   type: "photos" | "videos";
+  isProtected?: boolean;
 }
 
-export function ProgressBar({ uploadState, type }: ProgressBarProps) {
+export function ProgressBar({
+  uploadState,
+  type,
+  isProtected = false,
+}: ProgressBarProps) {
   if (!uploadState.isUploading) return null;
 
   const colors = {
@@ -37,6 +42,13 @@ export function ProgressBar({ uploadState, type }: ProgressBarProps) {
           <div className="flex items-center justify-center space-x-2 mb-2">
             <span className="text-2xl animate-pulse">{theme.icon}</span>
             <p className="font-semibold text-gray-800">{theme.text}</p>
+            {isProtected && (
+              <div className="flex items-center space-x-1">
+                <span className="text-sm" title="Navigation protégée">
+                  🛡️
+                </span>
+              </div>
+            )}
           </div>
           {uploadState.currentFileName && (
             <p className="text-sm text-gray-600 truncate max-w-xs mx-auto">

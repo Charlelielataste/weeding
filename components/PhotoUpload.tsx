@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { validatePhotos, MAX_PHOTOS } from "../utils/fileValidation";
 import { usePhotoUpload } from "../hooks/usePhotoUpload";
+import { useUploadProtection } from "../hooks/useUploadProtection";
 import { ProgressBar } from "./ProgressBar";
 import { Toast } from "./Toast";
 import { useToast } from "../hooks/useToast";
@@ -12,6 +13,13 @@ export function PhotoUpload() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const { uploadState, uploadPhotos } = usePhotoUpload();
   const { toast, hideToast, showSuccess, showError } = useToast();
+
+  // Protection contre la perte d'upload
+  const { isProtected } = useUploadProtection({
+    isUploading: uploadState.isUploading,
+    message:
+      "🚫 Upload de photos en cours ! Vous allez perdre votre progression si vous quittez maintenant. Continuer ?",
+  });
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -96,7 +104,11 @@ export function PhotoUpload() {
       )}
 
       {/* Barre de progression photos */}
-      <ProgressBar uploadState={uploadState} type="photos" />
+      <ProgressBar
+        uploadState={uploadState}
+        type="photos"
+        isProtected={isProtected}
+      />
 
       {/* Toast de notification */}
       <Toast

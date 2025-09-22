@@ -2,12 +2,13 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   validateVideos,
   calculateVideoTotalSize,
-  MAX_VIDEO_SIZE_TOTAL,
 } from "../utils/fileValidation";
 import { useVideoUpload } from "../hooks/useVideoUpload";
+import { useUploadProtection } from "../hooks/useUploadProtection";
 import { ProgressBar } from "./ProgressBar";
 import {
   generateVideoThumbnail,
@@ -21,6 +22,13 @@ export function VideoUpload() {
   const [videoFiles, setVideoFiles] = useState<FileWithThumbnail[]>([]);
   const { uploadState, uploadVideos } = useVideoUpload();
   const { toast, hideToast, showSuccess, showError } = useToast();
+
+  // Protection contre la perte d'upload
+  const { isProtected } = useUploadProtection({
+    isUploading: uploadState.isUploading,
+    message:
+      "🚫 Upload de vidéos en cours ! Vous allez perdre votre progression si vous quittez maintenant. Continuer ?",
+  });
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files) return;
@@ -151,10 +159,13 @@ export function VideoUpload() {
                     {/* Thumbnail ou icône par défaut */}
                     <div className="w-12 h-8 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
                       {file.thumbnailUrl ? (
-                        <img
+                        <Image
                           src={file.thumbnailUrl}
                           alt={`Aperçu ${file.name}`}
+                          width={48}
+                          height={32}
                           className="w-full h-full object-cover rounded"
+                          unoptimized // Pour les blob URLs
                         />
                       ) : (
                         <span className="text-xs text-gray-400">🎬</span>
@@ -209,7 +220,11 @@ export function VideoUpload() {
       )}
 
       {/* Barre de progression vidéos */}
-      <ProgressBar uploadState={uploadState} type="videos" />
+      <ProgressBar
+        uploadState={uploadState}
+        type="videos"
+        isProtected={isProtected}
+      />
 
       {/* Toast de notification */}
       <Toast
