@@ -14,6 +14,7 @@ import {
   ModalContent,
   WindowWithModalHandler,
 } from "../types";
+import VideoPlayIcon from "@/components/icons/PlayIcon";
 
 export function Gallery() {
   const [activeTab, setActiveTab] = useState<TabType>("photos");
@@ -269,7 +270,9 @@ export function Gallery() {
 
                     {/* Overlay de play */}
                     <div className="absolute inset-0 bg-black/10 transition-colors flex items-center justify-center">
-                      <span className="text-2xl">▶️</span>
+                      <span className="text-2xl">
+                        <VideoPlayIcon className="size-7" />
+                      </span>
                     </div>
                   </div>
                 </div>

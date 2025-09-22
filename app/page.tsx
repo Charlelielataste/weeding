@@ -64,7 +64,8 @@ export default function HomePage() {
               partagés
             </p>
             <p>
-              💝 <strong>Limites :</strong> 50 photos + 300MB de vidéos total
+              💝 <strong>:</strong> N&apos;hésitez pas à leur laisser un message
+              vidéo
             </p>
           </div>
         </div>

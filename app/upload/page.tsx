@@ -7,12 +7,12 @@ import { VideoUpload } from "../../components/VideoUpload";
 
 export default function UploadPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8 px-4">
       {/* Navigation */}
       <nav className="fixed top-4 left-4 z-50">
         <Link
           href="/"
-          className="bg-white/80 backdrop-blur text-purple-600 rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-purple-600 font-bold rounded-xl px-4 py-2 shadow-lg transition-all"
         >
           Accueil
         </Link>
@@ -21,7 +21,7 @@ export default function UploadPage() {
       <nav className="fixed top-4 right-4 z-50">
         <Link
           href="/gallery"
-          className="bg-white/80 backdrop-blur text-pink-600 rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-pink-600 font-bold rounded-xl px-4 py-2 shadow-lg transition-all"
         >
           🖼️ Galerie
         </Link>

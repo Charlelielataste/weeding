@@ -45,11 +45,6 @@ export function PhotoUpload() {
 
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-center mb-4">
-        <span className="text-2xl mr-2">📸</span>
-        <h3 className="text-xl font-semibold text-pink-700">Photos</h3>
-      </div>
-
       <label className="block">
         <input
           type="file"

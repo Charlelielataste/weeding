@@ -11,7 +11,7 @@ export default function GalleryPage() {
       <nav className="fixed top-4 left-4 z-50">
         <Link
           href="/"
-          className="bg-white/80 backdrop-blur text-purple-600 rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-purple-600 font-bold rounded-xl px-4 py-2 shadow-lg"
         >
           Accueil
         </Link>
@@ -20,7 +20,7 @@ export default function GalleryPage() {
       <nav className="fixed top-4 right-4 z-50">
         <Link
           href="/upload"
-          className="bg-white/80 backdrop-blur text-pink-600 rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-pink-600 font-bold rounded-xl px-4 py-2 shadow-lg"
         >
           📸 Upload
         </Link>
