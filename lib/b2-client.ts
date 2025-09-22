@@ -2,6 +2,7 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { promises as fs } from "fs";
 
 export function createB2Client() {
   const endpoint = process.env.B2_ENDPOINT;
@@ -54,4 +55,56 @@ export async function generatePresignedUploadUrl(
   });
 
   return await getSignedUrl(client, command, { expiresIn });
+}
+
+// Upload un fichier directement vers B2 (pour les chunks assemblés)
+export async function uploadFile(
+  filePath: string,
+  key: string,
+  contentType: string
+): Promise<{
+  id: string;
+  name: string;
+  url: string;
+  thumbnailUrl: string;
+  webViewLink: string;
+  size: number;
+  type: string;
+}> {
+  const client = createB2Client();
+
+  if (!B2_CONFIG.bucketName) {
+    throw new Error("B2_BUCKET_NAME non configuré");
+  }
+
+  console.log("📤 Upload direct vers B2:", { key, contentType });
+
+  // Lire le fichier
+  const fileBuffer = await fs.readFile(filePath);
+  const fileStats = await fs.stat(filePath);
+
+  // Upload via PutObjectCommand
+  const command = new PutObjectCommand({
+    Bucket: B2_CONFIG.bucketName,
+    Key: key,
+    Body: fileBuffer,
+    ContentType: contentType,
+  });
+
+  await client.send(command);
+
+  console.log("✅ Upload B2 direct réussi");
+
+  // Retourner les infos du fichier dans le format attendu
+  const publicUrl = getPublicUrl(key);
+
+  return {
+    id: key,
+    name: key.split("/").pop() || key,
+    url: publicUrl,
+    thumbnailUrl: publicUrl,
+    webViewLink: publicUrl,
+    size: fileStats.size,
+    type: contentType,
+  };
 }
