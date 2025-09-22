@@ -72,7 +72,7 @@ export function VideoUpload() {
           <span className="text-4xl mb-2 block">🎥</span>
           <p className="text-purple-600 font-medium">Sélectionner des vidéos</p>
           <p className="text-sm text-gray-500 mt-1">
-            Max 100MB/fichier • 200MB total • MP4, MOV, AVI, WebM, 3GP
+            200MB total • MP4, MOV, AVI, WebM, 3GP
           </p>
         </div>
       </label>
