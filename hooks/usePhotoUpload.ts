@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { uploadPhoto } from "../services/api";
 import { UploadProgressState } from "../types";
-
 export function usePhotoUpload() {
   const [uploadState, setUploadState] = useState<UploadProgressState>({
     progress: 0,
@@ -15,7 +14,11 @@ export function usePhotoUpload() {
 
   const queryClient = useQueryClient();
 
-  const uploadPhotos = async (files: File[]) => {
+  const uploadPhotos = async (
+    files: File[],
+    onSuccess?: (message: string) => void,
+    onError?: (message: string) => void
+  ) => {
     if (files.length === 0) return;
 
     setUploadState({
@@ -51,10 +54,10 @@ export function usePhotoUpload() {
       // Rafraîchir la liste des photos
       queryClient.invalidateQueries({ queryKey: ["photos"] });
 
-      alert(`🎉 ${files.length} photo(s) uploadée(s) avec succès !`);
+      onSuccess?.(`🎉 ${files.length} photo(s) uploadée(s) avec succès !`);
     } catch (error) {
       console.error("Erreur upload photos:", error);
-      alert(
+      onError?.(
         `❌ Erreur lors de l'upload des photos: ${
           error instanceof Error ? error.message : "Erreur inconnue"
         }`

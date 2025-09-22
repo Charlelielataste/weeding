@@ -3,8 +3,8 @@ import { FileValidationResult } from "../types";
 
 // Constantes de validation
 export const MAX_PHOTOS = 50;
-export const MAX_VIDEO_SIZE_TOTAL = 200 * 1024 * 1024; // 200MB total
-export const MAX_VIDEO_SIZE_INDIVIDUAL = 100 * 1024 * 1024; // 100MB par fichier
+export const MAX_VIDEO_SIZE_TOTAL = 300 * 1024 * 1024; // 300MB total
+// Plus de limite par fichier individuel !
 
 export const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
@@ -69,17 +69,7 @@ export function validateVideos(
       continue;
     }
 
-    // Vérifier la taille du fichier individuel
-    if (file.size > MAX_VIDEO_SIZE_INDIVIDUAL) {
-      errors.push(
-        `Fichier "${
-          file.name
-        }" trop volumineux ! Taille max par fichier: 100MB. Taille actuelle: ${Math.round(
-          file.size / (1024 * 1024)
-        )}MB`
-      );
-      continue;
-    }
+    // Plus de limite par fichier individuel - seule la limite totale compte !
 
     // Vérifier le type de fichier plus spécifiquement
     if (
@@ -100,7 +90,7 @@ export function validateVideos(
     validFiles.push(file);
   }
 
-  // Vérifier la limite totale de 200MB pour toutes les vidéos
+  // Vérifier la limite totale de 300MB pour toutes les vidéos
   if (validFiles.length > 0) {
     const currentTotalSize = currentVideoFiles.reduce(
       (sum, file) => sum + file.size,

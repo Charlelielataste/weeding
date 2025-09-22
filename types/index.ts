@@ -9,6 +9,11 @@ export type MediaFile = {
   type?: string;
 };
 
+// Type pour les fichiers avec thumbnails locaux (avant upload)
+export type FileWithThumbnail = File & {
+  thumbnailUrl?: string;
+};
+
 export type TabType = "photos" | "videos";
 
 export type ModalContent = {
@@ -33,4 +38,17 @@ export type FileValidationResult = {
 // Interface pour gérer l'état de la modal dans l'historique
 export interface WindowWithModalHandler extends Window {
   modalBackHandler?: (e: PopStateEvent) => void;
+}
+
+// Types pour la pagination et infinite scroll
+export interface PaginationInfo {
+  hasMore: boolean;
+  nextCursor: string | null;
+  limit: number;
+  count: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationInfo;
 }

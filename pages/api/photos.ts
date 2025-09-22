@@ -8,12 +8,20 @@ export default async function handler(
 ) {
   try {
     console.log("🔍 Début récupération photos B2...");
+
+    // Paramètres de pagination
+    const limit = parseInt(req.query.limit as string) || 20; // 20 photos par page par défaut
+    const cursor = req.query.cursor as string; // Token de pagination
+
+    console.log("📄 Pagination:", { limit, cursor });
+
     const b2Client = createB2Client();
 
     const listCommand = new ListObjectsV2Command({
       Bucket: B2_CONFIG.bucketName,
-      Prefix: "photos/", // Seulement les fichiers dans le dossier photos/
-      MaxKeys: 100,
+      Prefix: "photos/",
+      MaxKeys: limit,
+      ContinuationToken: cursor || undefined, // Token pour la page suivante
     });
 
     const response = await b2Client.send(listCommand);
@@ -37,8 +45,18 @@ export default async function handler(
           new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
       ); // Plus récent en premier
 
-    console.log(`📸 ${photos.length} photos trouvées`);
-    res.json(photos);
+    console.log(`📸 ${photos.length} photos trouvées (page)`);
+
+    // Réponse avec métadonnées de pagination
+    res.json({
+      data: photos,
+      pagination: {
+        hasMore: !!response.IsTruncated,
+        nextCursor: response.NextContinuationToken || null,
+        limit,
+        count: photos.length,
+      },
+    });
   } catch (error) {
     console.error("❌ Erreur récupération photos B2:", error);
 

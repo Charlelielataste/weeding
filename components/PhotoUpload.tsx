@@ -5,10 +5,13 @@ import { useState } from "react";
 import { validatePhotos, MAX_PHOTOS } from "../utils/fileValidation";
 import { usePhotoUpload } from "../hooks/usePhotoUpload";
 import { ProgressBar } from "./ProgressBar";
+import { Toast } from "./Toast";
+import { useToast } from "../hooks/useToast";
 
 export function PhotoUpload() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const { uploadState, uploadPhotos } = usePhotoUpload();
+  const { toast, hideToast, showSuccess, showError } = useToast();
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -27,7 +30,7 @@ export function PhotoUpload() {
   };
 
   const handleUpload = () => {
-    uploadPhotos(photoFiles).then(() => {
+    uploadPhotos(photoFiles, showSuccess, showError).then(() => {
       setPhotoFiles([]);
     });
   };
@@ -94,6 +97,14 @@ export function PhotoUpload() {
 
       {/* Barre de progression photos */}
       <ProgressBar uploadState={uploadState} type="photos" />
+
+      {/* Toast de notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </div>
   );
 }

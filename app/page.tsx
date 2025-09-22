@@ -65,8 +65,7 @@ export default function HomePage() {
               partagés
             </p>
             <p>
-              💝 <strong>Limites :</strong> 50 photos + 200MB de vidéos par
-              session
+              💝 <strong>Limites :</strong> 50 photos + 300MB de vidéos total
             </p>
           </div>
         </div>

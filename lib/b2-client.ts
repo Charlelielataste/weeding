@@ -1,6 +1,5 @@
 // Configuration et client Backblaze B2
 import { S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { promises as fs } from "fs";
 
@@ -38,23 +37,6 @@ export function getPublicUrl(key: string): string {
     throw new Error("B2_PUBLIC_URL non configuré");
   }
   return `${publicUrl}/${key}`;
-}
-
-// Génère une URL pré-signée pour upload direct
-export async function generatePresignedUploadUrl(
-  fileName: string,
-  contentType: string,
-  expiresIn: number = 3600 // 1 heure par défaut
-): Promise<string> {
-  const client = createB2Client();
-
-  const command = new PutObjectCommand({
-    Bucket: B2_CONFIG.bucketName,
-    Key: fileName,
-    ContentType: contentType,
-  });
-
-  return await getSignedUrl(client, command, { expiresIn });
 }
 
 // Upload un fichier directement vers B2 (pour les chunks assemblés)

@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { uploadVideoWithPresignedUrl } from "../services/api";
 import { UploadProgressState } from "../types";
-
 export function useVideoUpload() {
   const [uploadState, setUploadState] = useState<UploadProgressState>({
     progress: 0,
@@ -15,8 +14,24 @@ export function useVideoUpload() {
 
   const queryClient = useQueryClient();
 
-  const uploadVideos = async (files: File[]) => {
+  const uploadVideos = async (
+    files: File[],
+    onSuccess?: (message: string) => void,
+    onError?: (message: string) => void
+  ) => {
     if (files.length === 0) return;
+
+    // Calculer le nombre total de chunks pour tous les fichiers
+    const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB par chunk
+    const totalChunks = files.reduce((total, file) => {
+      return total + Math.ceil(file.size / CHUNK_SIZE);
+    }, 0);
+
+    let uploadedChunks = 0;
+
+    console.log(
+      `📊 Total de ${totalChunks} chunks à uploader pour ${files.length} fichier(s)`
+    );
 
     setUploadState({
       progress: 0,
@@ -58,7 +73,30 @@ export function useVideoUpload() {
           console.log("📤 Upload direct vers B2...");
           const startTime = Date.now();
 
-          const response = await uploadVideoWithPresignedUrl(file);
+          // Callback pour mettre à jour la progression par chunk
+          const onChunkProgress = (
+            chunkIndex: number,
+            totalChunksForFile: number
+          ) => {
+            uploadedChunks++;
+            const overallProgress = (uploadedChunks / totalChunks) * 100;
+
+            setUploadState((prev) => ({
+              ...prev,
+              progress: overallProgress,
+            }));
+
+            console.log(
+              `📊 Chunk ${chunkIndex}/${totalChunksForFile} du fichier ${
+                i + 1
+              } → Progression globale: ${Math.round(overallProgress)}%`
+            );
+          };
+
+          const response = await uploadVideoWithPresignedUrl(
+            file,
+            onChunkProgress
+          );
 
           const uploadTime = Date.now() - startTime;
           console.log(
@@ -68,25 +106,13 @@ export function useVideoUpload() {
 
           successCount++;
 
-          // Mettre à jour la progression
-          const progress = ((i + 1) / files.length) * 100;
-          setUploadState((prev) => ({
-            ...prev,
-            progress,
-          }));
+          // La progression est maintenant gérée par chunks dans onChunkProgress
         } catch (fileError) {
           const errorMsg =
             fileError instanceof Error ? fileError.message : String(fileError);
           console.error(`❌ Erreur upload fichier "${file.name}":`, fileError);
 
           errorDetails.push(`"${file.name}": ${errorMsg}`);
-
-          // Mettre à jour la progression même en cas d'erreur
-          const progress = ((i + 1) / files.length) * 100;
-          setUploadState((prev) => ({
-            ...prev,
-            progress,
-          }));
         }
       }
 
@@ -97,12 +123,10 @@ export function useVideoUpload() {
 
       // Afficher le résultat
       if (successCount === files.length) {
-        alert(`🎉 ${successCount} vidéo(s) uploadée(s) avec succès !`);
+        onSuccess?.(`🎉 ${successCount} vidéo(s) uploadée(s) avec succès !`);
       } else if (successCount > 0) {
-        alert(
-          `⚠️ Résultat mixte:\n✅ ${successCount} vidéo(s) réussie(s)\n❌ ${
-            errorDetails.length
-          } échec(s):\n\n${errorDetails.join("\n")}`
+        onError?.(
+          `⚠️ Résultat mixte: ${successCount} réussie(s), ${errorDetails.length} échec(s)`
         );
       } else {
         throw new Error(
@@ -115,9 +139,6 @@ export function useVideoUpload() {
       let debugInfo = "\n\n🔍 INFOS DEBUG:\n";
       debugInfo += `• Nombre de fichiers: ${files.length}\n`;
       debugInfo += `• Navigateur: ${navigator.userAgent.split(" ").pop()}\n`;
-      debugInfo += `• Connexion: ${
-        (navigator as any).connection?.effectiveType || "inconnue"
-      }\n`;
       debugInfo += `• Taille totale: ${Math.round(
         files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)
       )}MB\n`;
@@ -137,10 +158,10 @@ export function useVideoUpload() {
           .join("\n")}\n`;
       }
 
-      alert(
-        `❌ Erreur lors de l'upload des vidéos !\n\n${
+      onError?.(
+        `❌ Erreur upload vidéos: ${
           error instanceof Error ? error.message : "Erreur inconnue"
-        }${debugInfo}\n\n💡 Essayez:\n• Une vidéo à la fois\n• Vérifiez votre connexion\n• Réduisez la taille si > 500MB`
+        }`
       );
     } finally {
       setUploadState({

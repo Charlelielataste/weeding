@@ -1,5 +1,5 @@
 // Services API pour les uploads et la récupération de médias
-import { MediaFile } from "../types";
+import { FileWithThumbnail, MediaFile, PaginatedResponse } from "../types";
 
 // ---- UPLOAD SERVICES ----
 export async function uploadPhoto(formData: FormData) {
@@ -11,7 +11,10 @@ export async function uploadPhoto(formData: FormData) {
   return res.json();
 }
 
-export async function uploadVideoWithPresignedUrl(file: File) {
+export async function uploadVideoWithPresignedUrl(
+  file: File,
+  onChunkProgress?: (chunkIndex: number, totalChunks: number) => void
+) {
   console.log("🎬 Upload vidéo intelligent:", {
     name: file.name,
     size: `${Math.round(file.size / (1024 * 1024))}MB`,
@@ -44,11 +47,37 @@ export async function uploadVideoWithPresignedUrl(file: File) {
 
   // Si fichier > 4MB → Upload par chunks
   console.log("📦 Fichier volumineux → Upload par chunks");
-  return await uploadVideoInChunks(file, CHUNK_SIZE);
+
+  // Extraire le thumbnail s'il existe (pour FileWithThumbnail)
+  const fileWithThumbnail = file as FileWithThumbnail;
+  let thumbnailData: string | undefined;
+
+  if (fileWithThumbnail.thumbnailUrl) {
+    try {
+      // Import dynamique pour éviter erreurs côté serveur
+      const { thumbnailToBase64 } = await import("../utils/videoThumbnail");
+      thumbnailData = await thumbnailToBase64(fileWithThumbnail.thumbnailUrl);
+      console.log("🖼️ Thumbnail converti en base64 pour upload");
+    } catch (error) {
+      console.warn("⚠️ Impossible de convertir thumbnail:", error);
+    }
+  }
+
+  return await uploadVideoInChunks(
+    file,
+    CHUNK_SIZE,
+    thumbnailData,
+    onChunkProgress
+  );
 }
 
 // Fonction pour upload par chunks
-async function uploadVideoInChunks(file: File, chunkSize: number) {
+async function uploadVideoInChunks(
+  file: File,
+  chunkSize: number,
+  thumbnailData?: string,
+  onChunkProgress?: (chunkIndex: number, totalChunks: number) => void
+) {
   const totalChunks = Math.ceil(file.size / chunkSize);
   const uploadId = `upload_${Date.now()}_${Math.random()
     .toString(36)
@@ -79,6 +108,12 @@ async function uploadVideoInChunks(file: File, chunkSize: number) {
     formData.append("fileName", file.name);
     formData.append("fileType", file.type);
 
+    // Ajouter le thumbnail seulement au premier chunk
+    if (chunkIndex === 0 && thumbnailData) {
+      formData.append("thumbnailData", thumbnailData);
+      console.log("🖼️ Thumbnail ajouté au premier chunk");
+    }
+
     const response = await fetch("/api/upload-chunk", {
       method: "POST",
       body: formData,
@@ -97,20 +132,35 @@ async function uploadVideoInChunks(file: File, chunkSize: number) {
     }
 
     console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} envoyé`);
+
+    // Notifier du progrès des chunks
+    onChunkProgress?.(chunkIndex + 1, totalChunks);
   }
 
   throw new Error("Upload par chunks incomplet");
 }
 
 // ---- FETCH SERVICES ----
-export async function fetchPhotos(): Promise<MediaFile[]> {
-  const res = await fetch("/api/photos");
+export async function fetchPhotos(
+  cursor?: string,
+  limit = 20
+): Promise<PaginatedResponse<MediaFile>> {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  if (cursor) params.append("cursor", cursor);
+
+  const res = await fetch(`/api/photos?${params}`);
   if (!res.ok) throw new Error("Erreur récupération photos");
   return res.json();
 }
 
-export async function fetchVideos(): Promise<MediaFile[]> {
-  const res = await fetch("/api/videos");
+export async function fetchVideos(
+  cursor?: string,
+  limit = 20
+): Promise<PaginatedResponse<MediaFile>> {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  if (cursor) params.append("cursor", cursor);
+
+  const res = await fetch(`/api/videos?${params}`);
   if (!res.ok) throw new Error("Erreur récupération vidéos");
   return res.json();
 }

@@ -19,6 +19,7 @@ const uploadSessions: Record<
     totalChunks: number;
     receivedChunks: number[];
     tempDir: string;
+    thumbnailData?: string | null;
   }
 > = {};
 
@@ -67,6 +68,9 @@ export default async function handler(
     const fileType = Array.isArray(fields.fileType)
       ? fields.fileType[0]
       : fields.fileType;
+    const thumbnailData = Array.isArray(fields.thumbnailData)
+      ? fields.thumbnailData[0]
+      : fields.thumbnailData;
 
     console.log("📋 Chunk reçu:", {
       uploadId,
@@ -87,6 +91,7 @@ export default async function handler(
         totalChunks,
         receivedChunks: [],
         tempDir: `/tmp/upload_${uploadId}`,
+        thumbnailData: thumbnailData || null, // Stocker le thumbnail pour le dernier chunk
       };
 
       // Créer le dossier temporaire
@@ -135,6 +140,43 @@ export default async function handler(
         fileType || "video/mp4"
       );
 
+      // Upload du thumbnail s'il existe
+      let thumbnailUrl = uploadResult.url; // Par défaut, même URL que la vidéo
+
+      if (session.thumbnailData) {
+        try {
+          console.log("🖼️ Upload thumbnail vers B2...");
+
+          // Convertir base64 en buffer
+          const base64Data = session.thumbnailData.split(",")[1]; // Enlever le prefix data:image/jpeg;base64,
+          const thumbnailBuffer = Buffer.from(base64Data, "base64");
+
+          // Créer un fichier temporaire pour le thumbnail
+          const thumbnailPath = `/tmp/thumb_${uploadId}.jpg`;
+          await fs.writeFile(thumbnailPath, thumbnailBuffer);
+
+          // Upload vers B2 dans le dossier thumbnails
+          const thumbnailFileName = `thumbnails/${timestamp}_${
+            sanitizedName.split(".")[0]
+          }.jpg`;
+          const thumbnailUploadResult = await uploadFile(
+            thumbnailPath,
+            thumbnailFileName,
+            "image/jpeg"
+          );
+
+          thumbnailUrl = thumbnailUploadResult.url;
+
+          // Nettoyer le fichier thumbnail temporaire
+          await fs.unlink(thumbnailPath);
+
+          console.log("✅ Thumbnail uploadé:", thumbnailFileName);
+        } catch (thumbnailError) {
+          console.warn("⚠️ Erreur upload thumbnail:", thumbnailError);
+          // Continue sans thumbnail - pas critique
+        }
+      }
+
       // Nettoyer les fichiers temporaires
       await fs.rm(session.tempDir, { recursive: true, force: true });
       await fs.unlink(finalFilePath);
@@ -144,7 +186,11 @@ export default async function handler(
 
       return res.status(200).json({
         success: true,
-        file: uploadResult,
+        file: {
+          ...uploadResult,
+          thumbnailUrl: thumbnailUrl,
+          thumbnailLink: thumbnailUrl, // Pour compatibilité avec MediaFile
+        },
         message: "Upload terminé avec succès",
       });
     } else {
