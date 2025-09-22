@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { PhotoUpload } from "../../components/PhotoUpload";
 import { VideoUpload } from "../../components/VideoUpload";
+import ArrowLeftIcon from "@/components/icons/ArrowLeftIcon";
 
 export default function UploadPage() {
   return (
@@ -12,16 +13,16 @@ export default function UploadPage() {
       <nav className="fixed top-4 left-4 z-50">
         <Link
           href="/"
-          className="bg-white/90 text-purple-600 font-bold rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-purple-600 font-bold rounded-xl px-4 py-2 shadow-lg flex items-center gap-1"
         >
-          Accueil
+          <ArrowLeftIcon className="size-4" /> Accueil
         </Link>
       </nav>
 
       <nav className="fixed top-4 right-4 z-50">
         <Link
           href="/gallery"
-          className="bg-white/90 text-pink-600 font-bold rounded-xl px-4 py-2 shadow-lg transition-all"
+          className="bg-white/90 text-pink-600 font-bold rounded-xl px-4 py-2 shadow-lg flex items-center gap-1"
         >
           🖼️ Galerie
         </Link>

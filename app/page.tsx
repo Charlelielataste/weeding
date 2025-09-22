@@ -63,10 +63,7 @@ export default function HomePage() {
               🎨 <strong>Galerie :</strong> Découvrez tous les souvenirs
               partagés
             </p>
-            <p>
-              💝 <strong>:</strong> N&apos;hésitez pas à leur laisser un message
-              vidéo
-            </p>
+            <p>💝 N&apos;hésitez pas à leur laisser un message vidéo</p>
           </div>
         </div>
 
