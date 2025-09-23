@@ -1,6 +1,6 @@
 // Hook pour protéger contre la perte d'uploads en cours
 import { useEffect, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 interface UseUploadProtectionOptions {
   isUploading: boolean;
@@ -11,7 +11,6 @@ export function useUploadProtection({
   isUploading,
   message = "⚠️ Un upload est en cours ! Vous allez perdre votre progression si vous quittez maintenant. Êtes-vous sûr de vouloir continuer ?",
 }: UseUploadProtectionOptions) {
-  const router = useRouter();
   const pathname = usePathname();
 
   // Protection contre le refresh/fermeture de page
@@ -87,6 +86,101 @@ export function useUploadProtection({
       window.removeEventListener("popstate", handlePopState);
     };
   }, [isUploading, message, pathname]);
+
+  // Protection spécifique pour Android - bouton retour physique/gesture
+  useEffect(() => {
+    const handleBackButton = (e: Event) => {
+      if (isUploading) {
+        e.preventDefault();
+        const shouldLeave = window.confirm(message);
+        if (!shouldLeave) {
+          console.log("🚫 Bouton retour Android bloqué - upload en cours");
+          return false;
+        }
+      }
+    };
+
+    // Protection pour les navigateurs Android avec gesture de retour
+    const handleTouchStart = (e: TouchEvent) => {
+      if (isUploading && e.touches.length > 0) {
+        const touch = e.touches[0];
+        // Détecter un swipe depuis le bord gauche (gesture de retour)
+        if (touch.clientX < 50) {
+          e.preventDefault();
+          const shouldLeave = window.confirm(message);
+          if (!shouldLeave) {
+            console.log("🚫 Gesture retour Android bloqué - upload en cours");
+          }
+        }
+      }
+    };
+
+    // Protection pour les WebViews Android
+    if (isUploading && typeof window !== "undefined") {
+      // Écouter l'événement backbutton pour les WebViews
+      document.addEventListener("backbutton", handleBackButton, false);
+      document.addEventListener("touchstart", handleTouchStart, {
+        passive: false,
+      });
+      console.log("🛡️ Protection bouton retour Android activée");
+    }
+
+    return () => {
+      document.removeEventListener("backbutton", handleBackButton, false);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [isUploading, message]);
+
+  // Protection supplémentaire pour la barre de navigation Android
+  useEffect(() => {
+    if (!isUploading || typeof window === "undefined") return;
+
+    // Détecter les changements de visibilité de la page (Android peut minimiser l'app)
+    const handleVisibilityChange = () => {
+      if (document.hidden && isUploading) {
+        console.log(
+          "⚠️ Page cachée pendant upload - Android peut avoir minimisé l'app"
+        );
+        // Optionnel: afficher une notification ou alerte
+      }
+    };
+
+    // Protection contre les événements de focus/blur (navigation Android)
+    const handleFocus = () => {
+      if (isUploading) {
+        console.log("🔄 Retour focus - vérification upload en cours");
+      }
+    };
+
+    const handleBlur = () => {
+      if (isUploading) {
+        console.log("⚠️ Perte de focus - upload en cours");
+      }
+    };
+
+    // Protection contre les changements d'orientation (peut déclencher des rechargements)
+    const handleOrientationChange = () => {
+      if (isUploading) {
+        console.log("📱 Changement d'orientation pendant upload");
+        // Empêcher le rechargement automatique
+        window.history.pushState(null, "", pathname);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("orientationchange", handleOrientationChange);
+
+    console.log("🛡️ Protection barre navigation Android activée");
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+    };
+  }, [isUploading, pathname]);
 
   // Fonction pour débloquer manuellement (en cas d'upload terminé)
   const clearProtection = useCallback(() => {
