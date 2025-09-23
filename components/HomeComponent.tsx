@@ -73,7 +73,7 @@ export default function HomeComponent() {
 
   return (
     <motion.div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-screen flex items-center justify-center py-10"
       initial={{
         background: "linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%)",
       }}
@@ -283,15 +283,16 @@ export default function HomeComponent() {
               <h3 className="text-lg font-semibold text-gray-700 mb-3">
                 Comment ça marche ?
               </h3>
-              <div className="text-sm text-gray-600 space-y-2 text-left">
+              <div className="text-sm text-gray-600 space-y-3 text-left">
                 <p>
                   📱 <strong>Upload :</strong> Ajoutez vos photos et vidéos
                 </p>
                 <p>
                   🎨 <strong>Galerie :</strong> Découvrez tous les souvenirs
-                  partagés
                 </p>
-                <p>💝 N&apos;hésitez pas à leur laisser un message vidéo</p>
+                <p className="font-bold text-center text-purple-600 mt-3">
+                  N&apos;hésitez pas à leur laisser un message vidéo
+                </p>
               </div>
             </div>
           </div>
