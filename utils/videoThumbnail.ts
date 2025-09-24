@@ -20,8 +20,42 @@ export async function generateVideoThumbnail(
       return;
     }
 
+    // Timeout pour les vidéos qui ne se chargent jamais
+    const timeoutId = setTimeout(() => {
+      video.remove();
+      reject(
+        new Error(
+          "Timeout - impossible de charger la vidéo (probablement format iPhone non supporté)"
+        )
+      );
+    }, 10000); // 10 secondes
+
+    // Amélioration pour les vidéos iPhone
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+    video.muted = true; // Important pour l'autoplay sur iOS
+    video.playsInline = true; // Évite le mode plein écran sur iOS
+
+    // Essayer de forcer le décodage
+    video.setAttribute("webkit-playsinline", "true");
+
     video.addEventListener("loadedmetadata", () => {
-      // Définir la taille du canvas (aspect ratio 16:9 recommandé)
+      console.log("📹 Métadonnées vidéo chargées:", {
+        duration: video.duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        readyState: video.readyState,
+      });
+
+      // Vérifier que les dimensions sont valides
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        clearTimeout(timeoutId);
+        video.remove();
+        reject(new Error("Dimensions vidéo invalides - codec non supporté"));
+        return;
+      }
+
+      // Définir la taille du canvas (aspect ratio préservé)
       const maxWidth = 320;
       const maxHeight = 180;
 
@@ -43,34 +77,122 @@ export async function generateVideoThumbnail(
       canvas.width = videoWidth;
       canvas.height = videoHeight;
 
-      // Aller au moment spécifié
-      video.currentTime = Math.min(timeSeconds, video.duration - 0.1);
+      // Aller au moment spécifié (mais pas trop tôt pour éviter les frames noires)
+      const targetTime = Math.min(
+        Math.max(timeSeconds, 0.5),
+        video.duration - 0.5
+      );
+      video.currentTime = targetTime;
     });
 
     video.addEventListener("seeked", () => {
-      // Dessiner la frame actuelle sur le canvas
-      ctx!.drawImage(video, 0, 0, canvas.width, canvas.height);
+      try {
+        // Vérifier que la vidéo est vraiment prête
+        if (video.readyState < 2) {
+          // HAVE_CURRENT_DATA
+          console.warn(
+            "⚠️ Vidéo pas complètement chargée, nouvelle tentative..."
+          );
+          setTimeout(() => {
+            if (video.readyState >= 2) {
+              renderThumbnail();
+            } else {
+              clearTimeout(timeoutId);
+              video.remove();
+              reject(new Error("Vidéo ne peut pas être décodée"));
+            }
+          }, 500);
+          return;
+        }
 
-      // Convertir en blob URL
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const thumbnailUrl = URL.createObjectURL(blob);
-            resolve(thumbnailUrl);
-          } else {
-            reject(new Error("Impossible de créer le thumbnail"));
-          }
-        },
-        "image/jpeg",
-        0.8
-      ); // 80% qualité JPEG
-
-      // Nettoyer
-      video.remove();
+        renderThumbnail();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        video.remove();
+        reject(error);
+      }
     });
 
+    function renderThumbnail() {
+      try {
+        // Dessiner la frame actuelle sur le canvas
+        ctx!.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Vérifier que quelque chose a été dessiné (pas juste du noir)
+        const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+        const isNotEmpty = imageData.data.some((pixel, index) => {
+          // Vérifier qu'il y a des pixels non-noirs (en ignorant l'alpha)
+          if (index % 4 === 3) return false; // Canal alpha
+          return pixel > 10; // Seuil pour éviter le quasi-noir
+        });
+
+        if (!isNotEmpty) {
+          console.warn(
+            "⚠️ Frame apparemment vide, tentative à un autre moment..."
+          );
+          // Essayer à un autre moment
+          video.currentTime = Math.min(
+            video.duration * 0.25,
+            video.duration - 1
+          );
+          return;
+        }
+
+        // Convertir en blob URL
+        canvas.toBlob(
+          (blob) => {
+            clearTimeout(timeoutId);
+            if (blob) {
+              const thumbnailUrl = URL.createObjectURL(blob);
+              resolve(thumbnailUrl);
+            } else {
+              reject(new Error("Impossible de créer le thumbnail"));
+            }
+            // Nettoyer
+            video.remove();
+          },
+          "image/jpeg",
+          0.8
+        ); // 80% qualité JPEG
+      } catch (error) {
+        clearTimeout(timeoutId);
+        video.remove();
+        reject(
+          new Error(`Erreur lors de la génération du thumbnail: ${error}`)
+        );
+      }
+    }
+
     video.addEventListener("error", (e) => {
-      reject(new Error(`Erreur chargement vidéo: ${e}`));
+      clearTimeout(timeoutId);
+      const errorEvent = e as ErrorEvent;
+      console.error("❌ Erreur chargement vidéo:", {
+        error: errorEvent.error,
+        message: errorEvent.message,
+        mediaError: video.error,
+      });
+
+      let errorMessage = "Erreur chargement vidéo";
+      if (video.error) {
+        switch (video.error.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            errorMessage = "Chargement vidéo abandonné";
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            errorMessage = "Erreur réseau lors du chargement";
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            errorMessage =
+              "Erreur décodage vidéo - format probablement non supporté (iPhone HEVC?)";
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorMessage = "Format vidéo non supporté par le navigateur";
+            break;
+        }
+      }
+
+      video.remove();
+      reject(new Error(errorMessage));
     });
 
     // Charger la vidéo
@@ -92,7 +214,6 @@ export async function generateMultipleThumbnails(
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     const thumbnails: string[] = [];
-    let currentIndex = 0;
 
     video.addEventListener("loadedmetadata", async () => {
       const duration = video.duration;
