@@ -3,8 +3,7 @@ import { FileValidationResult } from "../types";
 
 // Constantes de validation
 export const MAX_PHOTOS = 50;
-export const MAX_VIDEO_SIZE_TOTAL = 300 * 1024 * 1024; // 300MB total
-// Plus de limite par fichier individuel !
+export const MAX_VIDEO_SIZE_TOTAL = 3 * 1024 * 1024 * 1024; // 3GB total
 
 export const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
@@ -90,7 +89,7 @@ export function validateVideos(
     validFiles.push(file);
   }
 
-  // Vérifier la limite totale de 300MB pour toutes les vidéos
+  // Vérifier la limite totale de 3GB pour toutes les vidéos
   if (validFiles.length > 0) {
     const currentTotalSize = currentVideoFiles.reduce(
       (sum, file) => sum + file.size,

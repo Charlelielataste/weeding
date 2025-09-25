@@ -9,11 +9,6 @@ export type MediaFile = {
   type?: string;
 };
 
-// Type pour les fichiers avec thumbnails locaux (avant upload)
-export type FileWithThumbnail = File & {
-  thumbnailUrl?: string;
-};
-
 export type TabType = "photos" | "videos";
 
 export type ModalContent = {

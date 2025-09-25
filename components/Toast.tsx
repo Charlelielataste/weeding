@@ -1,7 +1,7 @@
 // Composant Toast pour les notifications non-intrusives
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -46,7 +46,7 @@ export function Toast({ message, type, isVisible, onClose }: ToastProps) {
   const style = toastStyles[type];
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 animate-in slide-in-from-top-2 duration-300">
+    <div className="fixed top-44 left-0 right-0 z-50 animate-in slide-in-from-top-2 duration-300">
       <div
         className={`${style.bg} text-white px-6 py-4 shadow-lg border-b-2 ${style.border} w-full backdrop-blur-sm`}
       >

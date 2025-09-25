@@ -136,28 +136,6 @@ export function useVideoUpload() {
     } catch (error) {
       console.error("❌ Erreur générale upload vidéos:", error);
 
-      let debugInfo = "\n\n🔍 INFOS DEBUG:\n";
-      debugInfo += `• Nombre de fichiers: ${files.length}\n`;
-      debugInfo += `• Navigateur: ${navigator.userAgent.split(" ").pop()}\n`;
-      debugInfo += `• Taille totale: ${Math.round(
-        files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)
-      )}MB\n`;
-
-      if (files.length > 0) {
-        debugInfo += `• Premier fichier:\n`;
-        debugInfo += `  - Nom: ${files[0].name}\n`;
-        debugInfo += `  - Type: ${files[0].type}\n`;
-        debugInfo += `  - Taille: ${Math.round(
-          files[0].size / (1024 * 1024)
-        )}MB\n`;
-      }
-
-      if (errorDetails.length > 0) {
-        debugInfo += `• Erreurs détaillées:\n${errorDetails
-          .map((e) => `  - ${e}`)
-          .join("\n")}\n`;
-      }
-
       onError?.(
         `❌ Erreur upload vidéos: ${
           error instanceof Error ? error.message : "Erreur inconnue"

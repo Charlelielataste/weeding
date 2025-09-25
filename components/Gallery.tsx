@@ -21,6 +21,20 @@ export function Gallery() {
   const [modalContent, setModalContent] = useState<ModalContent>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
 
+  // Initialiser l'onglet depuis localStorage
+  useEffect(() => {
+    const savedTab = localStorage.getItem("gallery-active-tab") as TabType;
+    if (savedTab && (savedTab === "photos" || savedTab === "videos")) {
+      setActiveTab(savedTab);
+    }
+  }, []);
+
+  // Sauvegarder l'onglet dans localStorage quand il change
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    localStorage.setItem("gallery-active-tab", tab);
+  };
+
   // Photos avec infinite scroll
   const {
     data: photosData,
@@ -59,14 +73,12 @@ export function Gallery() {
         hasNextPhotosPage &&
         !isFetchingNextPhotosPage
       ) {
-        console.log("🔄 Chargement page suivante photos...");
         fetchNextPhotosPage();
       } else if (
         activeTab === "videos" &&
         hasNextVideosPage &&
         !isFetchingNextVideosPage
       ) {
-        console.log("🔄 Chargement page suivante vidéos...");
         fetchNextVideosPage();
       }
     }
@@ -136,7 +148,7 @@ export function Gallery() {
       <div ref={tabsRef} className="flex justify-center mb-6">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-1 flex border border-pink-100">
           <button
-            onClick={() => setActiveTab("photos")}
+            onClick={() => handleTabChange("photos")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all ${
               activeTab === "photos"
                 ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
@@ -146,7 +158,7 @@ export function Gallery() {
             📸 Photos {photos && `(${photos.length})`}
           </button>
           <button
-            onClick={() => setActiveTab("videos")}
+            onClick={() => handleTabChange("videos")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all ${
               activeTab === "videos"
                 ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg"
@@ -244,29 +256,17 @@ export function Gallery() {
             {videos?.map((video) => (
               <div
                 key={video.id}
-                className="cursor-pointer"
+                className="group cursor-pointer"
                 onClick={() => openModal(video, "video")}
               >
                 <div className="relative overflow-hidden rounded-2xl shadow-lg bg-white p-2">
                   {/* Thumbnail ou icône par défaut */}
                   <div className="relative h-48 rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-indigo-100">
-                    {video.thumbnailLink &&
-                    video.thumbnailLink !== video.webViewLink ? (
-                      <Image
-                        src={video.thumbnailLink}
-                        alt={video.name}
-                        width={300}
-                        height={192}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-5xl group-hover:scale-110 transition-transform">
-                          🎬
-                        </span>
-                      </div>
-                    )}
+                    <video
+                      src={video.url}
+                      controls={false}
+                      className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+                    />
 
                     {/* Overlay de play */}
                     <div className="absolute inset-0 bg-black/10 transition-colors flex items-center justify-center">
@@ -342,7 +342,7 @@ export function Gallery() {
               <video
                 src={modalContent.url}
                 controls
-                className="max-w-full max-h-[90vh] rounded-lg"
+                className="max-w-[90dvw] max-h-[90vh] rounded-lg"
                 autoPlay
               />
             )}

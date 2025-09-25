@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   validateVideos,
   calculateVideoTotalSize,
@@ -10,16 +9,11 @@ import {
 import { useVideoUpload } from "../hooks/useVideoUpload";
 import { useUploadProtection } from "../hooks/useUploadProtection";
 import { ProgressBar } from "./ProgressBar";
-import {
-  generateVideoThumbnail,
-  cleanupThumbnails,
-} from "../utils/videoThumbnail";
-import { FileWithThumbnail } from "../types";
 import { Toast } from "./Toast";
 import { useToast } from "../hooks/useToast";
 
 export function VideoUpload() {
-  const [videoFiles, setVideoFiles] = useState<FileWithThumbnail[]>([]);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const { uploadState, uploadVideos } = useVideoUpload();
   const { toast, hideToast, showSuccess, showError } = useToast();
 
@@ -42,57 +36,13 @@ export function VideoUpload() {
     }
 
     if (validation.validFiles.length > 0) {
-      console.log("📹 Génération des thumbnails...");
-
-      // Générer les thumbnails pour chaque vidéo
-      const filesWithThumbnails: FileWithThumbnail[] = [];
-
-      for (const file of validation.validFiles) {
-        try {
-          console.log(`🖼️ Génération thumbnail pour: ${file.name}`);
-
-          const thumbnailUrl = await generateVideoThumbnail(file, 1); // 1 seconde
-
-          const fileWithThumbnail: FileWithThumbnail = Object.assign(file, {
-            thumbnailUrl,
-          });
-
-          filesWithThumbnails.push(fileWithThumbnail);
-
-          console.log(`✅ Thumbnail généré pour: ${file.name}`);
-        } catch (error) {
-          console.warn(
-            `⚠️ Impossible de générer thumbnail pour ${file.name}:`,
-            error
-          );
-
-          // Ajouter le fichier sans thumbnail
-          filesWithThumbnails.push(file);
-        }
-      }
-
-      setVideoFiles((prev) => [...prev, ...filesWithThumbnails]);
+      setVideoFiles((prev) => [...prev, ...validation.validFiles]);
     }
   };
 
   const handleUpload = () => {
     uploadVideos(videoFiles, showSuccess, showError).then(() => {
-      // Nettoyer tous les thumbnails avant de vider
-      cleanupThumbnails(
-        videoFiles.map((f) => f.thumbnailUrl).filter(Boolean) as string[]
-      );
       setVideoFiles([]);
-    });
-  };
-
-  const removeFile = (index: number) => {
-    setVideoFiles((prev) => {
-      const fileToRemove = prev[index];
-      // Nettoyer le thumbnail s'il existe
-      if (fileToRemove.thumbnailUrl) {
-        URL.revokeObjectURL(fileToRemove.thumbnailUrl);
-      }
-      return prev.filter((_, i) => i !== index);
     });
   };
 
@@ -106,7 +56,10 @@ export function VideoUpload() {
           type="file"
           accept="video/mp4,video/mov,video/avi,video/webm,video/3gp"
           multiple
-          onChange={(e) => handleFileSelect(e.target.files)}
+          onChange={(e) => {
+            handleFileSelect(e.target.files);
+            e.target.value = "";
+          }}
           className="hidden"
           disabled={uploadState.isUploading}
         />
@@ -145,48 +98,6 @@ export function VideoUpload() {
               </div>
             </div>
 
-            {/* Liste des vidéos avec thumbnails */}
-            <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
-              {videoFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between bg-white rounded-lg p-2"
-                >
-                  <div className="flex items-center space-x-3">
-                    {/* Thumbnail ou icône par défaut */}
-                    <div className="w-12 h-8 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
-                      {file.thumbnailUrl ? (
-                        <Image
-                          src={file.thumbnailUrl}
-                          alt={`Aperçu ${file.name}`}
-                          width={48}
-                          height={32}
-                          className="w-full h-full object-cover rounded"
-                          unoptimized // Pour les blob URLs
-                        />
-                      ) : (
-                        <span className="text-xs text-gray-400">🎬</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {Math.round(file.size / (1024 * 1024))}MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-red-400 hover:text-red-600 text-sm ml-2 flex-shrink-0"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-
             <div className="flex justify-between gap-2">
               <button
                 onClick={handleUpload}
@@ -199,12 +110,6 @@ export function VideoUpload() {
               </button>
               <button
                 onClick={() => {
-                  // Nettoyer tous les thumbnails avant de vider
-                  cleanupThumbnails(
-                    videoFiles
-                      .map((f) => f.thumbnailUrl)
-                      .filter(Boolean) as string[]
-                  );
                   setVideoFiles([]);
                 }}
                 className="text-gray-400 hover:text-red-500 transition-colors bg-purple-100 rounded-xl py-2 px-4"

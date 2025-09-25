@@ -1,5 +1,5 @@
 // Services API pour les uploads et la récupération de médias
-import { FileWithThumbnail, MediaFile, PaginatedResponse } from "../types";
+import { MediaFile, PaginatedResponse } from "../types";
 
 // ---- UPLOAD SERVICES ----
 export async function uploadPhoto(formData: FormData) {
@@ -48,34 +48,13 @@ export async function uploadVideoWithPresignedUrl(
   // Si fichier > 4MB → Upload par chunks
   console.log("📦 Fichier volumineux → Upload par chunks");
 
-  // Extraire le thumbnail s'il existe (pour FileWithThumbnail)
-  const fileWithThumbnail = file as FileWithThumbnail;
-  let thumbnailData: string | undefined;
-
-  if (fileWithThumbnail.thumbnailUrl) {
-    try {
-      // Import dynamique pour éviter erreurs côté serveur
-      const { thumbnailToBase64 } = await import("../utils/videoThumbnail");
-      thumbnailData = await thumbnailToBase64(fileWithThumbnail.thumbnailUrl);
-      console.log("🖼️ Thumbnail converti en base64 pour upload");
-    } catch (error) {
-      console.warn("⚠️ Impossible de convertir thumbnail:", error);
-    }
-  }
-
-  return await uploadVideoInChunks(
-    file,
-    CHUNK_SIZE,
-    thumbnailData,
-    onChunkProgress
-  );
+  return await uploadVideoInChunks(file, CHUNK_SIZE, onChunkProgress);
 }
 
 // Fonction pour upload par chunks
 async function uploadVideoInChunks(
   file: File,
   chunkSize: number,
-  thumbnailData?: string,
   onChunkProgress?: (chunkIndex: number, totalChunks: number) => void
 ) {
   const totalChunks = Math.ceil(file.size / chunkSize);
@@ -107,12 +86,6 @@ async function uploadVideoInChunks(
     formData.append("totalChunks", totalChunks.toString());
     formData.append("fileName", file.name);
     formData.append("fileType", file.type);
-
-    // Ajouter le thumbnail seulement au premier chunk
-    if (chunkIndex === 0 && thumbnailData) {
-      formData.append("thumbnailData", thumbnailData);
-      console.log("🖼️ Thumbnail ajouté au premier chunk");
-    }
 
     const response = await fetch("/api/upload-chunk", {
       method: "POST",

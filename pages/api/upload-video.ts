@@ -139,7 +139,7 @@ export default async function handler(
           id: fileName,
           name: file.originalFilename,
           url: publicUrl,
-          thumbnailUrl: publicUrl, // Peut être amélioré avec des thumbnails vidéo
+          thumbnailUrl: publicUrl, // Utilise l'URL de la vidéo comme thumbnail
           webViewLink: publicUrl,
           size: file.size,
           type: contentType,

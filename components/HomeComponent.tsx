@@ -66,7 +66,7 @@ export default function HomeComponent() {
         setShowVideo(true);
         // Jouer le son quand la vidéo apparaît
       }, 1000);
-    }, 2000);
+    }, 1500);
   };
 
   // Si la vidéo doit être affichée, on affiche seulement la vidéo avec le bouton refresh
@@ -244,11 +244,11 @@ export default function HomeComponent() {
               Partagez vos plus beaux souvenirs de notre mariage
             </p>
             <div className="flex justify-center space-x-2">
-              <span className="text-2xl">🌸</span>
+              <span className="text-2xl">🐰</span>
               <span className="text-2xl">✨</span>
               <span className="text-2xl">💐</span>
               <span className="text-2xl">✨</span>
-              <span className="text-2xl">🌸</span>
+              <span className="text-2xl">🐰</span>
             </div>
           </div>
 
@@ -270,9 +270,9 @@ export default function HomeComponent() {
               className="block bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-4 px-8 rounded-2xl font-semibold text-lg transition-all shadow-lg"
             >
               <div className="flex items-center justify-center space-x-3">
-                <span className="text-2xl">🎭</span>
+                <span className="text-2xl">🌸</span>
                 <span>Voir la Galerie</span>
-                <span className="text-2xl">🖼️</span>
+                <span className="text-2xl">🌸</span>
               </div>
             </Link>
           </div>
@@ -283,14 +283,14 @@ export default function HomeComponent() {
               <h3 className="text-lg font-semibold text-gray-700 mb-3">
                 Comment ça marche ?
               </h3>
-              <div className="text-sm text-gray-600 space-y-3 text-left">
+              <div className="text-sm text-gray-600 space-y-3 text-center">
                 <p>
-                  📱 <strong>Upload :</strong> Ajoutez vos photos et vidéos
+                  📱 <strong>Télécharger :</strong> Ajoutez vos photos et vidéos
                 </p>
                 <p>
                   🎨 <strong>Galerie :</strong> Découvrez tous les souvenirs
                 </p>
-                <p className="font-bold text-center text-purple-600 mt-3">
+                <p className="font-bold text-purple-600 mt-3">
                   N&apos;hésitez pas à leur laisser un message vidéo
                 </p>
               </div>
