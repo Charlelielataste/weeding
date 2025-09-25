@@ -46,25 +46,10 @@ export function VideoUpload() {
 
       // Générer les thumbnails pour chaque vidéo
       const filesWithThumbnails: FileWithThumbnail[] = [];
-      let thumbnailFailures = 0;
 
       for (const file of validation.validFiles) {
         try {
-          console.log(
-            `🖼️ Génération thumbnail pour: ${file.name} (${file.type})`
-          );
-
-          // Détecter les vidéos iPhone problématiques
-          const isLikelyIPhoneVideo =
-            file.name.toLowerCase().includes("img_") ||
-            file.type === "video/quicktime" ||
-            file.name.toLowerCase().endsWith(".mov");
-
-          if (isLikelyIPhoneVideo) {
-            console.log(
-              "📱 Vidéo iPhone détectée, génération thumbnail avec précautions..."
-            );
-          }
+          console.log(`🖼️ Génération thumbnail pour: ${file.name}`);
 
           const thumbnailUrl = await generateVideoThumbnail(file, 1); // 1 seconde
 
@@ -76,7 +61,6 @@ export function VideoUpload() {
 
           console.log(`✅ Thumbnail généré pour: ${file.name}`);
         } catch (error) {
-          thumbnailFailures++;
           console.warn(
             `⚠️ Impossible de générer thumbnail pour ${file.name}:`,
             error
@@ -85,13 +69,6 @@ export function VideoUpload() {
           // Ajouter le fichier sans thumbnail
           filesWithThumbnails.push(file);
         }
-      }
-
-      // Informer l'utilisateur si des thumbnails ont échoué
-      if (thumbnailFailures > 0) {
-        showError(
-          `⚠️ ${thumbnailFailures} thumbnail(s) n'ont pas pu être générés (probablement vidéos iPhone). L'upload fonctionnera quand même !`
-        );
       }
 
       setVideoFiles((prev) => [...prev, ...filesWithThumbnails]);
