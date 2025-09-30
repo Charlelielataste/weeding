@@ -2,23 +2,25 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import { promises as fs } from "fs";
 import path from "path";
-import { uploadFile } from "../../lib/b2-client";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { createB2Client, B2_CONFIG, getPublicUrl } from "../../lib/b2-client";
 
-// Config pour traiter les fichiers
+// Config pour traiter les fichiers photos
 export const config = {
   api: {
     bodyParser: false, // Désactive le parser par défaut
   },
 };
 
-// Store des chunks en cours d'upload
-const uploadSessions: Record<
+// Store des chunks photos en cours d'upload
+const photoUploadSessions: Record<
   string,
   {
     fileName: string;
     totalChunks: number;
     receivedChunks: number[];
     tempDir: string;
+    fileType: string;
   }
 > = {};
 
@@ -26,7 +28,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log("📦 API upload-chunk appelée:", {
+  console.log("📸 API upload-photo-chunk appelée:", {
     method: req.method,
     headers: {
       "content-type": req.headers["content-type"],
@@ -68,7 +70,7 @@ export default async function handler(
       ? fields.fileType[0]
       : fields.fileType;
 
-    console.log("📋 Chunk reçu:", {
+    console.log("📋 Chunk photo reçu:", {
       uploadId,
       chunkIndex,
       totalChunks,
@@ -81,19 +83,22 @@ export default async function handler(
     }
 
     // Initialiser la session d'upload si c'est le premier chunk
-    if (!uploadSessions[uploadId]) {
-      uploadSessions[uploadId] = {
+    if (!photoUploadSessions[uploadId]) {
+      photoUploadSessions[uploadId] = {
         fileName: originalFileName,
         totalChunks,
         receivedChunks: [],
-        tempDir: `/tmp/upload_${uploadId}`,
+        tempDir: `/tmp/photo_upload_${uploadId}`,
+        fileType: fileType || "image/jpeg",
       };
 
       // Créer le dossier temporaire
-      await fs.mkdir(uploadSessions[uploadId].tempDir, { recursive: true });
+      await fs.mkdir(photoUploadSessions[uploadId].tempDir, {
+        recursive: true,
+      });
     }
 
-    const session = uploadSessions[uploadId];
+    const session = photoUploadSessions[uploadId];
     const chunkFile = Array.isArray(files.chunk) ? files.chunk[0] : files.chunk;
 
     // Sauvegarder le chunk
@@ -103,14 +108,14 @@ export default async function handler(
     // Marquer le chunk comme reçu
     session.receivedChunks.push(chunkIndex);
 
-    console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} sauvegardé`);
+    console.log(`✅ Chunk photo ${chunkIndex + 1}/${totalChunks} sauvegardé`);
 
     // Vérifier si tous les chunks sont reçus
     if (session.receivedChunks.length === totalChunks) {
-      console.log("🔄 Tous les chunks reçus, assemblage...");
+      console.log("🔄 Tous les chunks photo reçus, assemblage...");
 
       // Assembler le fichier final
-      const finalFilePath = `/tmp/final_${uploadId}_${originalFileName}`;
+      const finalFilePath = `/tmp/final_photo_${uploadId}_${originalFileName}`;
       const writeStream = await fs.open(finalFilePath, "w");
 
       // Assembler les chunks dans l'ordre
@@ -122,62 +127,91 @@ export default async function handler(
 
       await writeStream.close();
 
-      console.log("📤 Upload vers B2...");
+      console.log("📤 Upload photo vers B2...");
 
-      // Upload vers B2
+      // Créer un nom unique pour le fichier
       const timestamp = Date.now();
       const sanitizedName = originalFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueFileName = `videos/${timestamp}_${sanitizedName}`;
+      const uniqueFileName = `photos/${timestamp}_${sanitizedName}`;
 
-      const uploadResult = await uploadFile(
-        finalFilePath,
-        uniqueFileName,
-        fileType || "video/mp4"
-      );
+      // Créer le client B2
+      const b2Client = createB2Client();
+
+      // Lire le fichier assemblé
+      const fileBuffer = await fs.readFile(finalFilePath);
+
+      // Upload vers B2
+      const uploadCommand = new PutObjectCommand({
+        Bucket: B2_CONFIG.bucketName,
+        Key: uniqueFileName,
+        Body: fileBuffer,
+        ContentType: session.fileType,
+        // Métadonnées
+        Metadata: {
+          "original-name": originalFileName,
+          "upload-date": new Date().toISOString(),
+          "upload-method": "chunks",
+          "total-chunks": totalChunks.toString(),
+        },
+      });
+
+      await b2Client.send(uploadCommand);
 
       // Nettoyer les fichiers temporaires
       await fs.rm(session.tempDir, { recursive: true, force: true });
       await fs.unlink(finalFilePath);
-      delete uploadSessions[uploadId];
+      delete photoUploadSessions[uploadId];
 
-      console.log("✅ Upload final réussi");
+      // URL publique du fichier
+      const publicUrl = getPublicUrl(uniqueFileName);
+
+      console.log("✅ Photo uploadée avec succès via chunks:", uniqueFileName);
 
       return res.status(200).json({
         success: true,
         file: {
-          ...uploadResult,
-          thumbnailUrl: uploadResult.url,
-          thumbnailLink: uploadResult.url, // Utilise l'URL de la vidéo comme thumbnail
+          id: uniqueFileName,
+          name: originalFileName,
+          url: publicUrl,
+          thumbnailUrl: publicUrl,
+          webViewLink: publicUrl,
         },
-        message: "Upload terminé avec succès",
+        message: "Upload photo terminé avec succès",
+        uploadMethod: "chunks",
+        totalChunks,
       });
     } else {
       // Chunk reçu, en attente des autres
       return res.status(200).json({
         success: true,
-        message: `Chunk ${chunkIndex + 1}/${totalChunks} reçu`,
+        message: `Chunk photo ${chunkIndex + 1}/${totalChunks} reçu`,
         receivedChunks: session.receivedChunks.length,
         totalChunks,
       });
     }
   } catch (error) {
-    console.error("❌ Erreur upload chunk:", error);
+    console.error("❌ Erreur upload chunk photo:", error);
 
     // Messages d'erreur plus spécifiques
-    let errorMessage = "Erreur lors de l'upload du chunk";
+    let errorMessage = "Erreur lors de l'upload du chunk photo";
     const errorMsg = error instanceof Error ? error.message : String(error);
 
     if (errorMsg?.includes("maxFileSize")) {
-      errorMessage = "Chunk trop volumineux (max 4MB). Limite Vercel dépassée.";
+      errorMessage =
+        "Chunk photo trop volumineux (max 4MB). Limite Vercel dépassée.";
     } else if (errorMsg?.includes("LIMIT_FILE_SIZE")) {
       errorMessage =
-        "Taille du chunk dépassée. Essayez avec des fichiers plus petits.";
+        "Taille du chunk photo dépassée. Essayez avec des fichiers plus petits.";
     } else if (errorMsg?.includes("ENOENT")) {
-      errorMessage = "Fichier temporaire perdu pendant le traitement.";
+      errorMessage = "Fichier temporaire perdu pendant le traitement photo.";
     } else if (errorMsg?.includes("ENOSPC")) {
       errorMessage = "Espace disque insuffisant sur le serveur.";
     } else if (errorMsg?.includes("timeout")) {
-      errorMessage = "Timeout durant l'upload du chunk.";
+      errorMessage = "Timeout durant l'upload du chunk photo.";
+    } else if (errorMsg?.includes("credentials")) {
+      errorMessage = "Erreur d'authentification B2 pour la photo.";
+    } else if (errorMsg?.includes("bucket")) {
+      errorMessage = "Bucket B2 introuvable pour la photo.";
     }
 
     return res.status(500).json({
@@ -187,6 +221,7 @@ export default async function handler(
         timestamp: new Date().toISOString(),
         chunkSize: "Max 4MB",
         vercelLimit: "4.5MB total body size",
+        fileType: "photo",
       },
     });
   }

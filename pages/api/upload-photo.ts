@@ -13,12 +13,30 @@ export default async function handler(
 ) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const form = formidable({});
+  const form = formidable({
+    maxFileSize: 4 * 1024 * 1024, // 4MB max pour upload simple (> 4MB sera géré par chunks)
+  });
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      console.error("Erreur parsing formulaire:", err);
-      return res.status(500).json({ error: "Erreur parsing formulaire" });
+      console.error("Erreur parsing formulaire photo:", err);
+
+      let errorMessage = "Erreur parsing formulaire photo";
+      if (err.code === "LIMIT_FILE_SIZE") {
+        errorMessage =
+          "Photo trop volumineuse pour upload simple (max 4MB). Le chunking automatique devrait être utilisé.";
+      } else if (err.code === "ECONNRESET") {
+        errorMessage = "Connexion interrompue pendant l'upload photo";
+      } else if (err.message?.includes("aborted")) {
+        errorMessage = "Upload photo annulé";
+      }
+
+      return res.status(500).json({
+        error: errorMessage,
+        details: err.message,
+        code: err.code || "UNKNOWN_ERROR",
+        hint: "Les photos > 4MB utilisent automatiquement le chunking",
+      });
     }
 
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
@@ -52,6 +70,8 @@ export default async function handler(
         Metadata: {
           "original-name": file.originalFilename || "photo.jpg",
           "upload-date": new Date().toISOString(),
+          "upload-method": "simple",
+          "file-size": file.size?.toString() || "unknown",
         },
       });
 

@@ -3,7 +3,7 @@ import { FileValidationResult } from "../types";
 import { isHEICFile } from "./heicConverter";
 
 // Constantes de validation
-export const MAX_PHOTOS = 50;
+export const MAX_PHOTOS = 20; // Réduit pour éviter les abus et crashes
 export const MAX_VIDEO_SIZE_TOTAL = 3 * 1024 * 1024 * 1024; // 3GB total
 
 export const ALLOWED_VIDEO_TYPES = [
@@ -40,7 +40,7 @@ export function validatePhotos(
   const totalFiles = currentPhotoCount + validFiles.length;
   if (totalFiles > MAX_PHOTOS) {
     errors.push(
-      `Limite dépassée ! Max ${MAX_PHOTOS} photos par envoi. Actuel: ${currentPhotoCount}, Nouveau: ${validFiles.length}`
+      `Limite dépassée ! Max ${MAX_PHOTOS} photos par envoi (optimisé pour éviter les crashes). Actuel: ${currentPhotoCount}, Nouveau: ${validFiles.length}`
     );
     return { validFiles: [], errors };
   }
