@@ -1,5 +1,5 @@
 // Utilitaire pour convertir les fichiers HEIC en JPEG
-import heic2any from "heic2any";
+// Import dynamique pour éviter les erreurs SSR
 
 /**
  * Détecte si un fichier est au format HEIC
@@ -25,6 +25,9 @@ export function isHEICFile(file: File): boolean {
 export async function convertHEICToJPEG(file: File): Promise<File> {
   try {
     console.log(`🔄 Conversion HEIC vers JPEG: ${file.name}`);
+
+    // Import dynamique pour éviter les erreurs SSR
+    const heic2any = (await import("heic2any")).default;
 
     // Convertir HEIC en JPEG avec heic2any
     const result = await heic2any({
