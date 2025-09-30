@@ -129,10 +129,13 @@ export default async function handler(
 
       console.log("📤 Upload photo vers B2...");
 
-      // Créer un nom unique pour le fichier
-      const timestamp = Date.now();
+      // Créer un nom unique pour le fichier en utilisant l'uploadId pour éviter les collisions
+      const timestampFromUploadId =
+        uploadId.split("_")[2] || Date.now().toString();
       const sanitizedName = originalFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueFileName = `photos/${timestamp}_${sanitizedName}`;
+      const uniqueFileName = `photos/${timestampFromUploadId}_${
+        uploadId.split("_")[4] || "chunk"
+      }_${sanitizedName}`;
 
       // Créer le client B2
       const b2Client = createB2Client();
@@ -191,6 +194,24 @@ export default async function handler(
     }
   } catch (error) {
     console.error("❌ Erreur upload chunk photo:", error);
+
+    // NETTOYER LES SESSIONS PHOTOS EN CAS D'ERREUR pour éviter les memory leaks
+    const uploadId = req.body?.uploadId;
+    if (uploadId && photoUploadSessions[uploadId]) {
+      try {
+        await fs.rm(photoUploadSessions[uploadId].tempDir, {
+          recursive: true,
+          force: true,
+        });
+        delete photoUploadSessions[uploadId];
+        console.log("🧹 Session photo nettoyée après erreur:", uploadId);
+      } catch (cleanupError) {
+        console.warn(
+          "⚠️ Impossible de nettoyer la session photo:",
+          cleanupError
+        );
+      }
+    }
 
     // Messages d'erreur plus spécifiques
     let errorMessage = "Erreur lors de l'upload du chunk photo";

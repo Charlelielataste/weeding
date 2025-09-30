@@ -124,10 +124,13 @@ export default async function handler(
 
       console.log("📤 Upload vers B2...");
 
-      // Upload vers B2
-      const timestamp = Date.now();
+      // Upload vers B2 en utilisant l'uploadId pour éviter les collisions
+      const timestampFromUploadId =
+        uploadId.split("_")[1] || Date.now().toString();
       const sanitizedName = originalFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueFileName = `videos/${timestamp}_${sanitizedName}`;
+      const uniqueFileName = `videos/${timestampFromUploadId}_${
+        uploadId.split("_")[3] || "chunk"
+      }_${sanitizedName}`;
 
       const uploadResult = await uploadFile(
         finalFilePath,
@@ -162,6 +165,21 @@ export default async function handler(
     }
   } catch (error) {
     console.error("❌ Erreur upload chunk:", error);
+
+    // NETTOYER LES SESSIONS EN CAS D'ERREUR pour éviter les memory leaks
+    const uploadId = req.body?.uploadId;
+    if (uploadId && uploadSessions[uploadId]) {
+      try {
+        await fs.rm(uploadSessions[uploadId].tempDir, {
+          recursive: true,
+          force: true,
+        });
+        delete uploadSessions[uploadId];
+        console.log("🧹 Session nettoyée après erreur:", uploadId);
+      } catch (cleanupError) {
+        console.warn("⚠️ Impossible de nettoyer la session:", cleanupError);
+      }
+    }
 
     // Messages d'erreur plus spécifiques
     let errorMessage = "Erreur lors de l'upload du chunk";

@@ -39,9 +39,12 @@ export async function uploadPhoto(formData: FormData) {
 // Upload photo par chunks (même logique que vidéos)
 async function uploadPhotoInChunks(file: File) {
   const totalChunks = Math.ceil(file.size / PHOTO_CHUNK_SIZE);
-  const uploadId = `photo_upload_${Date.now()}_${Math.random()
-    .toString(36)
-    .substr(2, 9)}`;
+  // ID unique AMÉLIORÉ pour éviter les collisions
+  const timestamp = Date.now();
+  const randomPart = Math.random().toString(36).substr(2, 9);
+  const filePart = file.name.replace(/[^a-zA-Z0-9]/g, "_").substr(0, 10);
+  const sizePart = file.size.toString().substr(-6); // 6 derniers digits de la taille
+  const uploadId = `photo_upload_${timestamp}_${filePart}_${sizePart}_${randomPart}`;
 
   console.log(
     `📸 Découpage photo en ${totalChunks} chunks de ${Math.round(
