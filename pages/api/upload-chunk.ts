@@ -22,6 +22,9 @@ const uploadSessions: Record<
   }
 > = {};
 
+// LIMITE de sessions simultanées pour éviter la surcharge disque
+const MAX_CONCURRENT_SESSIONS = 5;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -34,6 +37,36 @@ export default async function handler(
     },
     timestamp: new Date().toISOString(),
   });
+
+  // NETTOYAGE PRÉVENTIF de l'espace disque pour éviter ENOSPC
+  try {
+    const tmpDir = "/tmp";
+    const files = await fs.readdir(tmpDir);
+    const oldFiles = files.filter(
+      (file) =>
+        file.startsWith("upload_") ||
+        file.startsWith("final_") ||
+        file.startsWith("tmp")
+    );
+
+    // Nettoyer les anciens fichiers temporaires (plus de 5 minutes)
+    for (const file of oldFiles) {
+      try {
+        const filePath = path.join(tmpDir, file);
+        const stats = await fs.stat(filePath);
+        const age = Date.now() - stats.mtime.getTime();
+        if (age > 5 * 60 * 1000) {
+          // 5 minutes
+          await fs.rm(filePath, { recursive: true, force: true });
+          console.log("🧹 Fichier temporaire ancien nettoyé:", file);
+        }
+      } catch {
+        // Ignorer les erreurs de nettoyage
+      }
+    }
+  } catch (cleanupError) {
+    console.warn("⚠️ Impossible de nettoyer l'espace disque:", cleanupError);
+  }
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
@@ -82,6 +115,15 @@ export default async function handler(
 
     // Initialiser la session d'upload si c'est le premier chunk
     if (!uploadSessions[uploadId]) {
+      // VÉRIFIER LA LIMITE de sessions simultanées
+      if (Object.keys(uploadSessions).length >= MAX_CONCURRENT_SESSIONS) {
+        return res.status(429).json({
+          error: "Trop d'uploads simultanés. Veuillez patienter.",
+          details: `Maximum ${MAX_CONCURRENT_SESSIONS} uploads simultanés autorisés`,
+          retryAfter: 30, // secondes
+        });
+      }
+
       uploadSessions[uploadId] = {
         fileName: originalFileName,
         totalChunks,
@@ -99,6 +141,16 @@ export default async function handler(
     // Sauvegarder le chunk
     const chunkPath = path.join(session.tempDir, `chunk_${chunkIndex}`);
     await fs.copyFile(chunkFile.filepath, chunkPath);
+
+    // NETTOYER IMMÉDIATEMENT le fichier temporaire formidable pour libérer l'espace
+    try {
+      await fs.unlink(chunkFile.filepath);
+    } catch (cleanupError) {
+      console.warn(
+        "⚠️ Impossible de nettoyer le fichier formidable:",
+        cleanupError
+      );
+    }
 
     // Marquer le chunk comme reçu
     session.receivedChunks.push(chunkIndex);
