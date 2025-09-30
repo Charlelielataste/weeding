@@ -1,5 +1,6 @@
 // Utilitaires pour la validation des fichiers
 import { FileValidationResult } from "../types";
+import { isHEICFile } from "./heicConverter";
 
 // Constantes de validation
 export const MAX_PHOTOS = 50;
@@ -27,7 +28,7 @@ export function validatePhotos(
 
   // Filtrer pour ne garder que les images
   for (const file of newFiles) {
-    const isImage = file.type.startsWith("image/");
+    const isImage = file.type.startsWith("image/") || isHEICFile(file);
     if (!isImage) {
       errors.push(`"${file.name}" n'est pas une image !`);
       continue;
