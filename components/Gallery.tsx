@@ -211,6 +211,7 @@ export function Gallery() {
                   <Image
                     src={photo.thumbnailLink}
                     alt={photo.name}
+                    unoptimized={true}
                     width={300}
                     height={192}
                     className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
@@ -334,6 +335,7 @@ export function Gallery() {
               <Image
                 src={modalContent.url}
                 alt={modalContent.name}
+                unoptimized={true}
                 width={800}
                 height={600}
                 className="max-w-full max-h-[90vh] object-contain rounded-lg"

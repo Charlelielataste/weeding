@@ -31,6 +31,22 @@ export default function UploadPage() {
       {/* Section Upload */}
       <div className="max-w-lg mx-auto mb-8 mt-10">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-pink-100 p-6">
+          <div className="max-w-lg mx-auto mb-8">
+            <p className="font-semibold text-black/50 text-sm text-center">
+              Si vous rencontrez des problèmes pour ajouter des photos ou des
+              vidéos, vous pouvez les envoyez depuis ce lien Drive :
+            </p>
+            <div className="flex justify-center">
+              <a
+                href="https://drive.google.com/drive/folders/1URx5iz0ZIopQ-nMBVqfs247v5bfsXOCk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-center text-pink-600 underline mt-3"
+              >
+                Dossier Photos & Vidéos Mariage
+              </a>
+            </div>
+          </div>
           {/* Upload Photos */}
           <PhotoUpload />
 
