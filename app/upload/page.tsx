@@ -2,8 +2,6 @@
 "use client";
 
 import Link from "next/link";
-import { PhotoUpload } from "../../components/PhotoUpload";
-import { VideoUpload } from "../../components/VideoUpload";
 import ArrowLeftIcon from "@/components/icons/ArrowLeftIcon";
 
 export default function UploadPage() {
@@ -19,22 +17,13 @@ export default function UploadPage() {
         </Link>
       </nav>
 
-      <nav className="fixed top-4 right-4 z-50">
-        <Link
-          href="/gallery"
-          className="bg-white/90 text-pink-600 font-bold rounded-xl px-4 py-2 shadow-lg flex items-center gap-2"
-        >
-          <span>🌸</span> Galerie
-        </Link>
-      </nav>
-
       {/* Section Upload */}
       <div className="max-w-lg mx-auto mb-8 mt-10">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-pink-100 p-6">
-          <div className="max-w-lg mx-auto mb-8">
+          <div className="max-w-lg mx-auto">
             <p className="font-semibold text-black/50 text-sm text-center">
-              Si vous rencontrez des problèmes pour ajouter des photos ou des
-              vidéos, vous pouvez les envoyez depuis ce lien Drive :
+              Pour ajouter des photos ou des vidéos, vous pouvez les envoyez
+              directement depuis ce lien Drive :
             </p>
             <div className="flex justify-center">
               <a
@@ -47,18 +36,6 @@ export default function UploadPage() {
               </a>
             </div>
           </div>
-          {/* Upload Photos */}
-          <PhotoUpload />
-
-          {/* Séparateur décoratif */}
-          <div className="flex items-center my-6">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-pink-200 to-transparent"></div>
-            <span className="px-3 text-pink-400">✨</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-pink-200 to-transparent"></div>
-          </div>
-
-          {/* Upload Vidéos */}
-          <VideoUpload />
         </div>
       </div>
     </div>

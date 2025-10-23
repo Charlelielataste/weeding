@@ -264,17 +264,6 @@ export default function HomeComponent() {
                 <span className="text-2xl">🎬</span>
               </div>
             </Link>
-
-            <Link
-              href="/gallery"
-              className="block bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-4 px-8 rounded-2xl font-semibold text-lg transition-all shadow-lg"
-            >
-              <div className="flex items-center justify-center space-x-3">
-                <span className="text-2xl">🌸</span>
-                <span>Voir la Galerie</span>
-                <span className="text-2xl">🌸</span>
-              </div>
-            </Link>
           </div>
 
           {/* Informations supplémentaires */}
